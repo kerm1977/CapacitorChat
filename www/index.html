@@ -19,14 +19,9 @@
         <i class="bi bi-arrow-left fs-4 text-dark"></i>
     </button>
 
-    <!-- BOTÓN GLOBAL DE ACTUALIZACIÓN OTA -->
-    <!-- Ubicado a la derecha, justo al lado del botón de cerrar sesión -->
-    <button id="global-update-btn" class="global-floating-btn" onclick="buscarActualizacion()" style="right: 70px; z-index: 999999;" title="Buscar Actualizaciones">
-        <i class="bi bi-cloud-arrow-down-fill fs-4 text-primary"></i>
-    </button>
 
-    <!-- BOTÓN GLOBAL DE CERRAR SESIÓN -->
-    <button id="global-logout-btn" class="global-floating-btn hidden-forced" onclick="cerrarSesion()">
+    <!-- BOTÓN GLOBAL DE CERRAR SESIÓN (Oculto permanentemente para no romper el JS) -->
+    <button id="global-logout-btn" style="display: none !important;" onclick="cerrarSesion()">
         <i class="bi bi-box-arrow-right fs-4 text-danger"></i>
     </button>
 
@@ -111,36 +106,7 @@
         </div>
     </div>
 
-    <!-- ================================================================= -->
-    <!-- MODAL DE ACTUALIZACIÓN OTA (DISEÑO MODERNO)                       -->
-    <!-- ================================================================= -->
-    <!-- Usamos data-bs-backdrop="static" para que no se cierre accidentalmente al descargar -->
-    <div class="modal fade" id="modalOTA" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-dialog-centered px-3">
-            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-                <div class="modal-header border-0 pb-0 pt-4 px-4 d-flex justify-content-center position-relative">
-                    <h5 class="modal-title fw-bold text-center w-100" id="otaModalTitle">Comprobando...</h5>
-                    <button type="button" class="btn-close position-absolute end-0 top-0 mt-3 me-3" data-bs-dismiss="modal" aria-label="Close" id="otaCloseBtnTop"></button>
-                </div>
-                <div class="modal-body text-center py-4 px-4">
-                    
-                    <!-- Estado: Cargando -->
-                    <div id="otaSpinner" class="mb-3">
-                        <div class="spinner-border text-primary" style="width: 3.5rem; height: 3.5rem; border-width: 0.25em;" role="status"></div>
-                    </div>
-                    
-                    <!-- Estado: Icono (Éxito / Alerta) -->
-                    <i id="otaIcon" class="bi bi-cloud-arrow-down text-primary mb-3 d-none" style="font-size: 4rem; line-height: 1;"></i>
-                    
-                    <p id="otaMessage" class="text-secondary mb-0 fs-6">Conectando con el servidor para buscar nuevas versiones...</p>
-                </div>
-                <div class="modal-footer border-0 d-flex flex-column gap-2 pb-4 pt-0 px-4">
-                    <button type="button" class="btn btn-primary w-100 rounded-pill py-2 fw-bold d-none" id="otaConfirmBtn">Actualizar Ahora</button>
-                    <button type="button" class="btn btn-light w-100 rounded-pill py-2 fw-bold" data-bs-dismiss="modal" id="otaCancelBtn">Cancelar</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    
 
 
     <!-- IMPORTAMOS EL MOTOR DE LA BD PARA TENER LA URL DINÁMICA -->
@@ -159,7 +125,7 @@
     <!-- ================================================================= -->
     <script src="js/registro.js"></script>
      <!-- ================================================================= -->
-    <!-- SCRIPT PERFIL                                                      -->
+    <!-- SCRIPT PERFIL                                                     -->
     <!-- ================================================================== -->
     <script src="js/perfil.js"></script>
 

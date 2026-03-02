@@ -1,3 +1,4 @@
+// www/js/registro.js
 // Todo envuelto en un try-catch global para que un error no mate tu SPA.
 try {
     // --- VISIBILIDAD DE CONTRASEÑAS (Debe ser global para los onclick) ---
@@ -228,12 +229,20 @@ try {
             try {
                 const apellidosUnidos = document.getElementById('regApellido1').value.trim() + " " + document.getElementById('regApellido2').value.trim();
 
+                // AQUÍ ESTABA EL ERROR: HEMOS INYECTADO LAS 3 LÍNEAS FINALES DE LA FECHA (dob) 
                 const payload = {
                     nombre: document.getElementById('regNombre').value.trim(),
                     apellido1: apellidosUnidos, 
                     email: document.getElementById('regEmail').value.trim(),
                     pin: document.getElementById('regPin').value.trim(),
-                    password: pw1
+                    password: pw1,
+                    telefono: document.getElementById('regTelefono') ? document.getElementById('regTelefono').value.trim() : '',
+                    emgNombre: document.getElementById('emgNombre') ? document.getElementById('emgNombre').value.trim() : '',
+                    emgTelefono: document.getElementById('emgTelefono') ? document.getElementById('emgTelefono').value.trim() : '',
+                    // --- ENVIAMOS LA FECHA AL SERVIDOR PARA QUE SE GUARDE CORRECTAMENTE ---
+                    dobDia: document.getElementById('dobDia') ? document.getElementById('dobDia').value : '',
+                    dobMes: document.getElementById('dobMes') ? document.getElementById('dobMes').value : '',
+                    dobAnio: document.getElementById('dobAnio') ? document.getElementById('dobAnio').value : ''
                 };
 
                 const respuesta = await fetch(`${API_URL}/registro`, {

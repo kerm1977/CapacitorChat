@@ -146,6 +146,15 @@
         
         if (datosGuardados) {
             usuario = JSON.parse(datosGuardados);
+
+            // 👇 NUEVO: BUSCAR LA FECHA DE NACIMIENTO EN LA CAJA FUERTE LOCAL 👇
+            const dobSeguro = localStorage.getItem('tribu_dob_' + usuario.email);
+            if(dobSeguro) {
+                const dobP = JSON.parse(dobSeguro);
+                usuario.dobAnio = dobP.dobAnio;
+                usuario.dobMes = dobP.dobMes;
+                usuario.dobDia = dobP.dobDia;
+            }
             
             // Separar el nombre en 3 partes si está guardado junto
             let partesNombre = (usuario.nombre || '').split(' ');
@@ -314,7 +323,7 @@
             selectMes.addEventListener('change', () => { actualizarDias(); calcularEdad(); });
             selectDia.addEventListener('change', calcularEdad);
 
-            // Setear valores guardados si existen
+            // Setear valores guardados si existen en el usuario/caja fuerte local
             if(usuario.dobAnio) selectAnio.value = usuario.dobAnio;
             if(usuario.dobMes) selectMes.value = usuario.dobMes;
             actualizarDias();
@@ -346,9 +355,11 @@
                     nombre: document.getElementById('editNombre').value.trim(),
                     apellido1: document.getElementById('editApellido1').value.trim(),
                     apellido2: document.getElementById('editApellido2').value.trim(),
-                    pin: document.getElementById('editPin').value
-                    // Nota: Si agregas más columnas a la DB en PythonAnywhere luego (teléfono, avatar, etc),
-                    // simplemente se agregan a este payload.
+                    pin: document.getElementById('editPin').value,
+                    // --- NUEVOS CAMPOS AÑADIDOS AL PAYLOAD ---
+                    telefono: tel,
+                    emgNombre: document.getElementById('editEmgNombre').value.trim(),
+                    emgTelefono: emTel
                 };
 
                 // === 1. PETICIÓN REAL A PYTHON ANYWHERE ===
@@ -387,8 +398,15 @@
                     usuario.avatar = src;
                 }
 
-                // Guardar en localStorage
+                // Guardar usuario en localStorage principal
                 localStorage.setItem('usuarioActual', JSON.stringify(usuario));
+
+                // 👇 NUEVO: ACTUALIZAR LA CAJA FUERTE LOCAL DE EDAD 👇
+                localStorage.setItem('tribu_dob_' + usuario.email, JSON.stringify({
+                    dobAnio: selectAnio.value,
+                    dobMes: selectMes.value,
+                    dobDia: selectDia.value
+                }));
 
                 // Volver a perfil
                 window.location.hash = 'perfil';

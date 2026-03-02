@@ -1,3 +1,4 @@
+# app.py
 import os
 import logging
 from flask import Flask, request, jsonify, send_from_directory, make_response
@@ -67,7 +68,14 @@ def get_db_session(app_slug):
             Column('nombre', String(100)),
             Column('apellido1', String(100)),
             Column('pin', String(20)),
-            Column('puntos_totales', Integer, default=0)
+            Column('puntos_totales', Integer, default=0),
+            Column('rol', String(20), default='usuario'), # NUEVO: Columna de roles
+            Column('telefono', String(20)),               # NUEVO: Teléfono
+            Column('emg_nombre', String(100)),            # NUEVO: Contacto Emergencia
+            Column('emg_telefono', String(20)),           # NUEVO: Teléfono Emergencia
+            Column('dob_dia', String(4)),                 # NUEVO: Día de nacimiento
+            Column('dob_mes', String(4)),                 # NUEVO: Mes de nacimiento
+            Column('dob_anio', String(4))                 # NUEVO: Año de nacimiento
         )
         
         event = Table('event', metadata,
@@ -88,6 +96,36 @@ def get_db_session(app_slug):
                     conn.execute(text("ALTER TABLE user ADD COLUMN username VARCHAR(80)"))
                 except Exception:
                     pass # Si falla, significa que la columna ya existe, lo cual está bien.
+                try:
+                    # Parche para inyectar la columna 'rol' en bases de datos viejas
+                    conn.execute(text("ALTER TABLE member ADD COLUMN rol VARCHAR(20) DEFAULT 'usuario'"))
+                except Exception:
+                    pass
+                try:
+                    conn.execute(text("ALTER TABLE member ADD COLUMN telefono VARCHAR(20)"))
+                except Exception:
+                    pass
+                try:
+                    conn.execute(text("ALTER TABLE member ADD COLUMN emg_nombre VARCHAR(100)"))
+                except Exception:
+                    pass
+                try:
+                    conn.execute(text("ALTER TABLE member ADD COLUMN emg_telefono VARCHAR(20)"))
+                except Exception:
+                    pass
+                # PARCHES NUEVOS PARA LA EDAD
+                try:
+                    conn.execute(text("ALTER TABLE member ADD COLUMN dob_dia VARCHAR(4)"))
+                except Exception:
+                    pass
+                try:
+                    conn.execute(text("ALTER TABLE member ADD COLUMN dob_mes VARCHAR(4)"))
+                except Exception:
+                    pass
+                try:
+                    conn.execute(text("ALTER TABLE member ADD COLUMN dob_anio VARCHAR(4)"))
+                except Exception:
+                    pass
         
         # SEED de datos iniciales solo si la DB es nueva
         if not db_exists:
@@ -108,7 +146,8 @@ def get_db_session(app_slug):
                         nombre='Administrador',
                         apellido1='Kenth',
                         pin='00000000',
-                        puntos_totales=0
+                        puntos_totales=0,
+                        rol='superadmin' # Asignación de rol
                     ))
 
                     # ========================================================
@@ -126,7 +165,8 @@ def get_db_session(app_slug):
                         nombre='Administrador',
                         apellido1='LTHiking',
                         pin='88888888',
-                        puntos_totales=0
+                        puntos_totales=0,
+                        rol='superadmin' # Asignación de rol
                     ))
 
                     print(f"Base de datos {safe_slug}.db creada e inicializada con 2 superusuarios.")
@@ -177,6 +217,18 @@ def registrar_usuario(app_slug):
         print(f"[*] Intento de registro en DB '{app_slug}' | Email: {data.get('email')}")
         
         session = get_db_session(app_slug)
+        
+        # --- NUEVA VALIDACIÓN: Verificar si el correo ya existe ---
+        usuario_existente = session.execute(
+            text("SELECT id FROM user WHERE email = :e"), 
+            {"e": data.get('email')}
+        ).fetchone()
+        
+        if usuario_existente:
+            # Si el usuario existe, retornamos un mensaje claro al cliente sin romper la BD
+            return jsonify({"error": "El correo ingresado ya se encuentra registrado."}), 400
+        # ----------------------------------------------------------
+
         hashed_pw = bcrypt.generate_password_hash(data['password']).decode('utf-8')
         username_interno = data['email']
         
@@ -185,9 +237,20 @@ def registrar_usuario(app_slug):
             {"u": username_interno, "e": data['email'], "p": hashed_pw}
         )
         
+        # Agregadas las variables para la edad en base de datos
         session.execute(
-            text("INSERT INTO member (nombre, apellido1, pin, puntos_totales) VALUES (:n, :a, :pin, 0)"),
-            {"n": data['nombre'], "a": data['apellido1'], "pin": data['pin']}
+            text("INSERT INTO member (nombre, apellido1, pin, puntos_totales, rol, telefono, emg_nombre, emg_telefono, dob_dia, dob_mes, dob_anio) VALUES (:n, :a, :pin, 0, 'usuario', :tel, :emg_n, :emg_t, :d_dia, :d_mes, :d_anio)"),
+            {
+                "n": data['nombre'], 
+                "a": data['apellido1'], 
+                "pin": data['pin'],
+                "tel": data.get('telefono', ''),
+                "emg_n": data.get('emgNombre', ''),
+                "emg_t": data.get('emgTelefono', ''),
+                "d_dia": data.get('dobDia', ''),
+                "d_mes": data.get('dobMes', ''),
+                "d_anio": data.get('dobAnio', '')
+            }
         )
         
         session.commit()
@@ -237,12 +300,19 @@ def login_usuario(app_slug):
         if not member_record:
             return jsonify({"error": "Perfil de usuario incompleto"}), 404
             
-        # 4. Empaquetar los datos para el frontend
+        # 4. Empaquetar los datos para el frontend (Blindados con str() para evitar errores JS)
         usuario_data = {
-            "nombre": f"{member_record['nombre']} {member_record['apellido1']}",
+            "nombre": f"{member_record['nombre']} {member_record['apellido1']}".strip(),
             "email": user_record['email'],
             "pin": member_record['pin'],
-            "puntos": member_record['puntos_totales']
+            "puntos": member_record['puntos_totales'],
+            "rol": member_record.get('rol', 'usuario'), 
+            "telefono": member_record.get('telefono') or '',
+            "emgNombre": member_record.get('emg_nombre') or '',
+            "emgTelefono": member_record.get('emg_telefono') or '',
+            "dobDia": str(member_record.get('dob_dia') or ''),
+            "dobMes": str(member_record.get('dob_mes') or ''),
+            "dobAnio": str(member_record.get('dob_anio') or '')
         }
         
         return jsonify({"status": "ok", "usuario": usuario_data})
@@ -283,13 +353,19 @@ def editar_perfil(app_slug):
         session.execute(
             text("""
                 UPDATE member 
-                SET nombre = :n, apellido1 = :a, pin = :pin 
+                SET nombre = :n, apellido1 = :a, pin = :pin, telefono = :tel, emg_nombre = :emg_n, emg_telefono = :emg_t, dob_dia = :d_dia, dob_mes = :d_mes, dob_anio = :d_anio
                 WHERE id = :id
             """),
             {
                 "n": data['nombre'], 
                 "a": apellidos_completos.strip(), 
-                "pin": data['pin'], 
+                "pin": data['pin'],
+                "tel": data.get('telefono', ''),
+                "emg_n": data.get('emgNombre', ''),
+                "emg_t": data.get('emgTelefono', ''),
+                "d_dia": data.get('dobDia', ''),
+                "d_mes": data.get('dobMes', ''),
+                "d_anio": data.get('dobAnio', ''),
                 "id": user_id
             }
         )
@@ -356,6 +432,207 @@ def obtener_contactos(app_slug, mi_pin):
     finally:
         if session:
             session.close()
+
+# ==============================================================================
+# NUEVO: RUTAS DE ADMINISTRACIÓN BASADAS EN ROLES Y EDICIÓN COMPLETA
+# ==============================================================================
+@app.route('/api/<app_slug>/admin/usuarios', methods=['GET', 'OPTIONS'])
+def admin_obtener_usuarios(app_slug):
+    """Devuelve la lista completa de usuarios registrados"""
+    if request.method == 'OPTIONS':
+        return jsonify({"status": "ok"}), 200
+        
+    session = None
+    try:
+        session = get_db_session(app_slug)
+        
+        # INCLUIMOS EL ROL EN LA CONSULTA
+        miembros = session.execute(
+            text("SELECT id, nombre, apellido1, pin, rol FROM member ORDER BY id ASC")
+        ).mappings().fetchall()
+        
+        usuarios = []
+        for index, m in enumerate(miembros, start=1):
+            apellido = m['apellido1'] if m['apellido1'] else ''
+            
+            usuarios.append({
+                "consecutivo": index,
+                "nombre": m['nombre'],
+                "apellido1": apellido,
+                "pin": m['pin'],
+                "rol": m.get('rol', 'usuario')
+            })
+            
+        return jsonify({"status": "ok", "usuarios": usuarios})
+    except Exception as e:
+        print(f"Error cargando lista de usuarios admin: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if session:
+            session.close()
+
+@app.route('/api/<app_slug>/admin/usuario_detalle/<pin>', methods=['GET', 'OPTIONS'])
+def admin_usuario_detalle(app_slug, pin):
+    """Devuelve absolutamente todos los datos de un usuario para la vista de edición profunda"""
+    if request.method == 'OPTIONS': 
+        return jsonify({"status": "ok"}), 200
+    session = None
+    try:
+        session = get_db_session(app_slug)
+        
+        # 1. Buscar información pública del perfil en 'member'
+        miembro = session.execute(text("SELECT * FROM member WHERE pin = :pin"), {"pin": pin}).mappings().fetchone()
+        if not miembro:
+            return jsonify({"error": "Usuario no encontrado"}), 404
+            
+        # 2. Buscar información privada de cuenta en 'user'
+        usuario = session.execute(text("SELECT email FROM user WHERE id = :id"), {"id": miembro['id']}).mappings().fetchone()
+        
+        return jsonify({
+            "status": "ok", 
+            "usuario": {
+                "nombre": miembro['nombre'],
+                "apellido1": miembro['apellido1'],
+                "pin": miembro['pin'],
+                "puntos": miembro['puntos_totales'],
+                "rol": miembro.get('rol', 'usuario'),
+                "telefono": miembro.get('telefono') or '',
+                "emgNombre": miembro.get('emg_nombre') or '',
+                "emgTelefono": miembro.get('emg_telefono') or '',
+                "dobDia": str(miembro.get('dob_dia') or ''),
+                "dobMes": str(miembro.get('dob_mes') or ''),
+                "dobAnio": str(miembro.get('dob_anio') or ''),
+                "email": usuario['email'] if usuario else ''
+            }
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if session: session.close()
+
+@app.route('/api/<app_slug>/admin/editar_usuario', methods=['POST', 'OPTIONS'])
+def admin_editar_usuario(app_slug):
+    """Actualiza la totalidad de los datos del usuario (Perfil, Configuración y Seguridad)"""
+    if request.method == 'OPTIONS': 
+        return jsonify({"status": "ok"}), 200
+    session = None
+    try:
+        data = request.json
+        session = get_db_session(app_slug)
+        
+        editor_pin = data.get('editor_pin')
+        target_pin = data.get('target_pin', data.get('pin')) # Soportamos target_pin explícito o fallback a pin
+
+        # Obtenemos los roles reales desde la base de datos (Seguridad Anti-Hack)
+        editor = session.execute(text("SELECT rol FROM member WHERE pin = :pin"), {"pin": editor_pin}).fetchone()
+        target_member = session.execute(text("SELECT * FROM member WHERE pin = :pin"), {"pin": target_pin}).mappings().fetchone()
+
+        if not target_member:
+            return jsonify({"error": "Usuario destino no encontrado."}), 404
+
+        editor_rol = editor[0] if editor and editor[0] else 'usuario'
+        target_id = target_member['id']
+        target_rol = target_member.get('rol', 'usuario')
+        
+        nuevo_rol = data.get('rol', target_rol)
+
+        # 🛡️ REGLAS DE PODER 🛡️
+        if editor_rol == 'usuario':
+            return jsonify({"error": "No tienes permisos de Administrador."}), 403
+        
+        if editor_rol == 'admin':
+            if target_rol == 'superadmin':
+                return jsonify({"error": "No tienes nivel suficiente para editar a un Superusuario."}), 403
+            if nuevo_rol == 'superadmin':
+                return jsonify({"error": "Solo un Superusuario puede crear a otro Superusuario."}), 403
+                
+        # --- 1. ACTUALIZAR TABLA MEMBER (Datos Públicos) ---
+        nuevo_nombre = data.get('nombre', target_member['nombre'])
+        nuevo_apellido = data.get('apellido', target_member['apellido1'])
+        nuevo_pin = data.get('nuevo_pin', data.get('pin', target_pin)) # Permitir cambio de PIN si se solicita
+        nuevos_puntos = data.get('puntos', target_member['puntos_totales'])
+        nuevo_telefono = data.get('telefono', target_member.get('telefono'))
+        nuevo_emg_nombre = data.get('emgNombre', target_member.get('emg_nombre'))
+        nuevo_emg_telefono = data.get('emgTelefono', target_member.get('emg_telefono'))
+        nuevo_dob_dia = data.get('dobDia', target_member.get('dob_dia'))
+        nuevo_dob_mes = data.get('dobMes', target_member.get('dob_mes'))
+        nuevo_dob_anio = data.get('dobAnio', target_member.get('dob_anio'))
+        
+        session.execute(
+            text("UPDATE member SET nombre = :n, apellido1 = :a, rol = :r, pin = :np, puntos_totales = :pt, telefono = :tel, emg_nombre = :emg_n, emg_telefono = :emg_t, dob_dia = :dd, dob_mes = :dm, dob_anio = :da WHERE id = :id"),
+            {
+                "n": nuevo_nombre, 
+                "a": nuevo_apellido, 
+                "r": nuevo_rol, 
+                "np": nuevo_pin,
+                "pt": nuevos_puntos,
+                "tel": nuevo_telefono,
+                "emg_n": nuevo_emg_nombre,
+                "emg_t": nuevo_emg_telefono,
+                "dd": nuevo_dob_dia,
+                "dm": nuevo_dob_mes,
+                "da": nuevo_dob_anio,
+                "id": target_id
+            }
+        )
+        
+        # --- 2. ACTUALIZAR TABLA USER (Datos de Seguridad) ---
+        nuevo_email = data.get('email')
+        nueva_pass = data.get('password')
+        
+        if nuevo_email:
+            session.execute(text("UPDATE user SET email = :e WHERE id = :id"), {"e": nuevo_email, "id": target_id})
+            
+        if nueva_pass and str(nueva_pass).strip() != '':
+            hashed_pw = bcrypt.generate_password_hash(str(nueva_pass).strip()).decode('utf-8')
+            session.execute(text("UPDATE user SET password = :p WHERE id = :id"), {"p": hashed_pw, "id": target_id})
+
+        session.commit()
+        return jsonify({"status": "ok", "mensaje": "Usuario actualizado completamente"})
+    except Exception as e:
+        if session: session.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if session: session.close()
+
+@app.route('/api/<app_slug>/admin/borrar_usuario/<pin>', methods=['DELETE', 'OPTIONS'])
+def admin_borrar_usuario(app_slug, pin):
+    if request.method == 'OPTIONS': 
+        return jsonify({"status": "ok"}), 200
+    session = None
+    try:
+        editor_pin = request.args.get('editor_pin')
+        session = get_db_session(app_slug)
+        
+        # Validar permisos del que ejecuta la orden
+        editor = session.execute(text("SELECT rol FROM member WHERE pin = :pin"), {"pin": editor_pin}).fetchone()
+        editor_rol = editor[0] if editor and editor[0] else 'usuario'
+        
+        if editor_rol == 'usuario':
+            return jsonify({"error": "No tienes permisos de Administrador."}), 403
+            
+        target = session.execute(text("SELECT id, rol FROM member WHERE pin = :pin"), {"pin": pin}).fetchone()
+        if target:
+            user_id = target[0]
+            target_rol = target[1] if target[1] else 'usuario'
+            
+            # 🛡️ REGLA: Admin no borra Superadmin 🛡️
+            if editor_rol == 'admin' and target_rol == 'superadmin':
+                return jsonify({"error": "Acceso Denegado: Imposible borrar a un Superusuario."}), 403
+                
+            session.execute(text("DELETE FROM member WHERE id = :id"), {"id": user_id})
+            session.execute(text("DELETE FROM user WHERE id = :id"), {"id": user_id})
+            session.commit()
+            return jsonify({"status": "ok"})
+        else:
+            return jsonify({"error": "Usuario no encontrado"}), 404
+            
+    except Exception as e:
+        if session: session.rollback()
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if session: session.close()
+
 
 # ==============================================================================
 # RUTA PUENTE PARA DESCARGAR ACTUALIZACIONES DESDE CARPETA PRIVADA
