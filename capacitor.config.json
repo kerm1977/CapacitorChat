@@ -1,6 +1,6 @@
 {
-  "appId": "com.geeko.app",
-  "appName": "Geeko",
+  "appId": "com.tribuapp.app",
+  "appName": "TribuAPP",
   "webDir": "www",
   "bundledWebRuntime": false
 }

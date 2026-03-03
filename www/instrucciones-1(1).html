@@ -1,0 +1,2084 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Caminatas e Itinerarios</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Librería para convertir el diseño HTML a Imagen PNG -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <style>
+        /* Estilos personalizados base */
+        .check-btn:checked + label {
+            background-color: #10b981; /* emerald-500 */
+            color: white;
+            border-color: #10b981;
+        }
+        .equipment-radio:checked + label {
+            font-weight: bold;
+            text-decoration: underline;
+        }
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans text-gray-800">
+
+    <!-- Navegación Responsiva -->
+    <nav class="bg-emerald-700 text-white p-4 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto flex flex-col min-[1040px]:flex-row justify-between items-center gap-4">
+            <h1 class="text-2xl font-bold text-center min-[1040px]:text-left w-full min-[1040px]:w-auto"><i class="fas fa-hiking mr-2"></i>Gestor La Tribu</h1>
+            
+            <div class="flex flex-col min-[940px]:flex-row items-center gap-2 w-full min-[1040px]:w-auto relative">
+                
+                <!-- Contenedor Colapsable 1: Exportar/Importar (Pasa arriba en pantallas < 940px) -->
+                <div id="toolsMenuTop" class="hidden flex-row gap-2 justify-center w-full min-[940px]:w-auto">
+                    <button onclick="exportData()" class="flex-1 sm:flex-none bg-emerald-800 text-white px-3 py-2 rounded-lg font-bold hover:bg-emerald-900 transition text-sm border border-emerald-600 flex justify-center items-center shadow" title="Exportar Todo">
+                        <i class="fas fa-download mr-1"></i> Exportar
+                    </button>
+                    <label class="flex-1 sm:flex-none bg-emerald-800 text-white px-3 py-2 rounded-lg font-bold hover:bg-emerald-900 transition text-sm border border-emerald-600 cursor-pointer flex justify-center items-center shadow" title="Importar">
+                        <i class="fas fa-upload mr-1"></i> Importar
+                        <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(this)">
+                    </label>
+                </div>
+
+                <div class="flex flex-col sm:flex-row flex-wrap justify-center items-stretch sm:items-center gap-2 w-full min-[940px]:w-auto">
+                    
+                    <!-- Botón Toggle Menú (Colapsable) -->
+                    <button onclick="toggleToolsMenu()" class="w-full sm:w-auto bg-emerald-800 text-white px-4 py-2 rounded-lg font-bold hover:bg-emerald-900 transition shadow flex justify-center items-center border border-emerald-600">
+                        <i id="toolsMenuIcon" class="fas fa-chevron-down mr-2"></i> Herramientas
+                    </button>
+
+                    <!-- Contenedor Colapsable 2: Oración/Pagos -->
+                    <div id="toolsMenuBottom" class="hidden flex-col sm:flex-row gap-2 justify-center w-full sm:w-auto items-stretch sm:items-center">
+                        <button onclick="openOracionModal()" class="w-full sm:w-auto bg-amber-100 text-amber-900 px-4 py-2 rounded-lg font-bold hover:bg-amber-200 transition shadow flex justify-center items-center border border-amber-300">
+                            <i class="fas fa-hands-praying mr-1"></i> Oración
+                        </button>
+
+                        <button onclick="openGlobalPaymentModal()" class="w-full sm:w-auto bg-emerald-100 text-emerald-900 px-4 py-2 rounded-lg font-bold hover:bg-emerald-200 transition shadow flex justify-center items-center border border-emerald-300">
+                            <i class="fas fa-wallet mr-1"></i> Pagos
+                        </button>
+                    </div>
+
+                    <!-- Botón de Acción Principal (Siempre visible) -->
+                    <button id="mainNavActionBtn" onclick="toggleForm()" class="w-full sm:w-auto bg-white text-emerald-800 px-4 py-2 rounded-lg font-bold hover:bg-gray-100 transition shadow flex justify-center items-center whitespace-nowrap">
+                        <i class="fas fa-plus mr-1"></i> Nueva Caminata
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sistema de Pestañas (Tabs) con fondo gris de tono verde -->
+    <div class="bg-[#e2e8e4] shadow-inner border-b border-gray-300">
+        <div class="container mx-auto px-2 sm:px-4 flex gap-1 pt-3 overflow-x-auto whitespace-nowrap">
+            <button onclick="switchTab('caminatas')" id="tabCaminatas" class="bg-gray-100 text-emerald-800 px-4 sm:px-6 py-2 rounded-t-lg font-bold text-sm sm:text-base shadow-[0_-2px_5px_rgba(0,0,0,0.1)] relative z-10 border-t border-l border-r border-gray-300">
+                <i class="fas fa-mountain mr-1"></i> Caminatas
+            </button>
+            <button onclick="switchTab('contactos')" id="tabContactos" class="text-gray-500 hover:text-emerald-700 hover:bg-gray-200 px-4 sm:px-6 py-2 rounded-t-lg font-bold text-sm sm:text-base border-t border-l border-r border-transparent transition-colors">
+                <i class="fas fa-address-book mr-1"></i> Agenda <span class="hidden sm:inline">de Contactos</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR PRINCIPAL DE VISTAS -->
+    <div class="container mx-auto p-4">
+
+        <div id="toast" class="fixed bottom-5 right-5 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-xl transform translate-y-20 transition-transform duration-300 z-[110]">
+            Mensaje de notificación
+        </div>
+
+        <!-- ========================================== -->
+        <!-- VISTA 1: CAMINATAS                         -->
+        <!-- ========================================== -->
+        <div id="caminatasView" class="fade-in">
+            
+            <div id="eventFormContainer" class="hidden bg-white rounded-xl shadow-2xl p-4 sm:p-6 mb-8 border-t-4 border-emerald-500">
+                <div class="flex justify-between items-center mb-6 border-b border-gray-200 pb-2">
+                    <h2 class="text-xl sm:text-2xl font-bold text-emerald-800" id="formTitle">Crear Nueva Caminata</h2>
+                    <button onclick="toggleForm()" class="text-gray-500 hover:text-red-500 text-2xl leading-none">&times;</button>
+                </div>
+
+                <form id="hikeForm" onsubmit="handleFormSubmit(event)">
+                    <input type="hidden" id="editIndex" value="-1">
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6">
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-sm font-bold mb-1 text-gray-800">Nombre de La Caminata</label>
+                            <input type="text" id="nombre" required class="w-full border border-gray-300 bg-gray-50 text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold mb-1 text-gray-800">Dificultad</label>
+                            <select id="dificultad" class="w-full border border-gray-300 bg-gray-50 text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500">
+                                <option>Paseo</option>
+                                <option>Básico</option>
+                                <option>Intermedio</option>
+                                <option>Dificil</option>
+                                <option>Avanzado</option>
+                                <option>Técnico</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold mb-1 text-gray-800">Actividad</label>
+                            <select id="actividad" class="w-full border border-gray-300 bg-gray-50 text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500" onchange="toggleActividad()">
+                                <option value="Caminata">Caminata</option>
+                                <option value="Internacional">Internacional</option>
+                                <option value="Parque Nacional">Parque Nacional</option>
+                                <option value="El Camino de Costa Rica">El Camino de Costa Rica</option>
+                                <option value="Fiesta">Fiesta</option>
+                                <option value="Convivio">Convivio</option>
+                                <option value="Reunión">Reunión</option>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-sm font-bold mb-1 text-gray-800">Moneda</label>
+                                <select id="moneda" class="w-full border border-gray-300 bg-gray-50 text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500">
+                                    <option value="₡">Colones (₡)</option>
+                                    <option value="$">Dólares ($)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-1 text-gray-800">Precio</label>
+                                <input type="number" id="precio" required class="w-full border border-gray-300 bg-gray-50 text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500" onkeypress="return event.charCode >= 48 && event.charCode <= 57">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-sm font-bold mb-1 text-gray-800">Reserva con</label>
+                                <input type="number" id="reserva" required class="w-full border border-gray-300 bg-gray-50 text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500" onkeypress="return event.charCode >= 48 && event.charCode <= 57">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-1 text-gray-800">Capacidad</label>
+                                <select id="capacidad" required class="w-full border border-gray-300 bg-gray-50 text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500">
+                                    <option value="14-17">14-17</option>
+                                    <option value="17-28">17-28</option>
+                                    <option value="17-31">17-31</option>
+                                    <option value="MÁS DE 31">MÁS DE 31</option>
+                                    <option value="NO APLICA">NO APLICA</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-sm font-bold mb-1 text-gray-800">SINPE</label>
+                            <select id="sinpe" class="w-full border border-gray-300 bg-gray-50 text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500">
+                                <option>86529837 - Jenny Ceciliano Cordoba</option>
+                                <option>87984232 - Jenny Ceciliano Cordoba</option>
+                                <option>86227500 - Kenneth Ruiz Matamoros</option>
+                            </select>
+                        </div>
+
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-sm font-bold mb-1 text-gray-800">CUENTAS</label>
+                            <select id="cuenta" class="w-full border border-gray-300 bg-gray-50 text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500">
+                                <option value="Ninguna">-- Ninguna / Solo usar SINPE --</option>
+                                <option>Jenny Ceciliano Cordoba (Colones MUCAP) - CR66080402010100715103</option>
+                                <option>Jenny Ceciliano Cordoba (Colones BCR) - CR62015202001268129163</option>
+                                <option>Kenneth Ruiz Matamoros (Colones MUCAP) - CR19080403012501524778</option>
+                                <option>Juan Carlos Ruiz (Colones BCR) - CR61015202001292863793</option>
+                                <option>Juan Carlos Ruiz (Dolares BCR) - CR50015202001410361158</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Nacional -->
+                    <div id="nationalFields" class="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
+                        <h3 class="font-bold text-lg mb-3 text-emerald-700">Logística y Fechas</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-bold mb-1 text-gray-800">Cantidad de Días</label>
+                                <input type="number" id="dias" min="1" max="10" value="1" onchange="toggleDateInputs()" class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500">
+                            </div>
+                            
+                            <div id="singleDateGroup" class="col-span-2">
+                                <label class="block text-sm font-bold mb-1 text-gray-800">Fecha de Actividad</label>
+                                <input type="date" id="fechaUnica" class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500">
+                            </div>
+
+                            <div id="rangeDateGroup" class="hidden col-span-2 grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-sm font-bold mb-1 text-gray-800">Fecha Inicio</label>
+                                    <input type="date" id="fechaInicio" class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold mb-1 text-gray-800">Fecha Regreso</label>
+                                    <input type="date" id="fechaRegreso" class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-bold mb-1 text-gray-800">Hora de Salida</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="time" id="horaSalida" class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500" onchange="updateTimePreview()">
+                                    <span id="timePreview" class="text-sm font-bold text-emerald-600 whitespace-nowrap min-w-[70px]"></span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-1 text-gray-800">Lugar de Salida</label>
+                                <select id="lugarSalida" class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500">
+                                    <option>Parque de Tres Ríos - Escuela</option>
+                                    <option>Parque de Tres Ríos - Cruz Roja</option>
+                                    <option>Parque de Tres Ríos - Letras</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <label class="block text-sm font-bold mb-2 text-gray-800">Pasamos a recoger en (Separar por comas):</label>
+                            <textarea id="puntosRecogidaInput" rows="2" class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500" placeholder="Ej: Cartago, Plaza del Sol, Outlet Mall, Sabana..."></textarea>
+                            <p class="text-xs text-gray-500 mt-1">Escriba los lugares donde pasará la buseta, separados por comas.</p>
+                        </div>
+                    </div>
+
+                    <!-- Internacional -->
+                    <div id="internationalFields" class="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-200 hidden">
+                        <h3 class="font-bold text-lg mb-3 text-blue-800"><i class="fas fa-plane mr-2"></i>Logística Internacional y Vuelos</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm font-bold mb-1 text-gray-800">País Destino</label>
+                                <select id="pais" class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:outline-none focus:border-blue-500">
+                                    <option value="Panamá">Panamá</option>
+                                    <option value="Nicaragua">Nicaragua</option>
+                                    <option value="El Salvador">El Salvador</option>
+                                    <option value="Honduras">Honduras</option>
+                                    <option value="Guatemala">Guatemala</option>
+                                    <option value="México">México</option>
+                                    <option value="España">España</option>
+                                    <option value="Perú">Perú</option>
+                                    <option value="Colombia">Colombia</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold mb-1 text-gray-800">Nombre Destino Exacto</label>
+                                <input type="text" id="destinoInternacional" class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:outline-none focus:border-blue-500" placeholder="Ej: Ciudad de México, Machu Picchu...">
+                            </div>
+                        </div>
+
+                        <!-- VUELO IDA -->
+                        <div class="bg-white p-3 rounded border border-blue-100 mb-4 shadow-sm">
+                            <h4 class="font-bold text-sm text-blue-600 mb-2 border-b border-blue-100 pb-1">✈️ Vuelo de IDA</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-1">Fecha de IDA</label>
+                                    <input type="date" id="fechaIda" class="w-full border border-gray-300 bg-gray-50 text-gray-800 rounded p-1.5 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-1">Hora Salida</label>
+                                    <input type="time" id="horaIda" class="w-full border border-gray-300 bg-gray-50 text-gray-800 rounded p-1.5 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-1">Aerolínea</label>
+                                    <select id="aerolineaIda" class="w-full border border-gray-300 bg-gray-50 text-gray-800 rounded p-1.5 text-sm">
+                                        <option>Avianca</option>
+                                        <option>Copa Airlines</option>
+                                        <option>Volaris</option>
+                                        <option>Aeroméxico</option>
+                                        <option>Iberia</option>
+                                        <option>LATAM</option>
+                                        <option>Wingo</option>
+                                        <option>Sansa</option>
+                                        <option>American Airlines</option>
+                                        <option>United Airlines</option>
+                                        <option>Delta</option>
+                                        <option>Air France</option>
+                                        <option>KLM</option>
+                                        <option>Edelweiss</option>
+                                        <option>Arajet</option>
+                                        <option>Otra</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-1"># Vuelo</label>
+                                    <input type="text" id="vueloIda" class="w-full border border-gray-300 bg-gray-50 text-gray-800 rounded p-1.5 text-sm" placeholder="Ej: CM 115">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- VUELO REGRESO -->
+                        <div class="bg-white p-3 rounded border border-blue-100 shadow-sm">
+                            <h4 class="font-bold text-sm text-blue-600 mb-2 border-b border-blue-100 pb-1">🛬 Vuelo de REGRESO</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-1">Fecha Regreso</label>
+                                    <input type="date" id="fechaRegresoInt" class="w-full border border-gray-300 bg-gray-50 text-gray-800 rounded p-1.5 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-1">Hora Regreso</label>
+                                    <input type="time" id="horaRegresoInt" class="w-full border border-gray-300 bg-gray-50 text-gray-800 rounded p-1.5 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-1">Aerolínea</label>
+                                    <select id="aerolineaRegreso" class="w-full border border-gray-300 bg-gray-50 text-gray-800 rounded p-1.5 text-sm">
+                                        <option>Avianca</option>
+                                        <option>Copa Airlines</option>
+                                        <option>Volaris</option>
+                                        <option>Aeroméxico</option>
+                                        <option>Iberia</option>
+                                        <option>LATAM</option>
+                                        <option>Wingo</option>
+                                        <option>Sansa</option>
+                                        <option>American Airlines</option>
+                                        <option>United Airlines</option>
+                                        <option>Delta</option>
+                                        <option>Air France</option>
+                                        <option>KLM</option>
+                                        <option>Edelweiss</option>
+                                        <option>Arajet</option>
+                                        <option>Otra</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-500 mb-1"># Vuelo</label>
+                                    <input type="text" id="vueloRegreso" class="w-full border border-gray-300 bg-gray-50 text-gray-800 rounded p-1.5 text-sm" placeholder="Ej: AV 631">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Incluye -->
+                    <div class="mb-6 border p-4 rounded-lg bg-emerald-50 border-emerald-200">
+                        <h3 class="font-bold text-lg mb-2 text-emerald-800">Incluye</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3 text-sm text-gray-800">
+                            <label><input type="checkbox" name="incluye" value="Transporte" class="accent-emerald-600"> Transporte</label>
+                            <label><input type="checkbox" name="incluye" value="Lancha" class="accent-emerald-600"> Lancha</label>
+                            <label><input type="checkbox" name="incluye" value="Desayuno" class="accent-emerald-600"> Desayuno</label>
+                            <label><input type="checkbox" name="incluye" value="Café" class="accent-emerald-600"> Café</label>
+                            <label><input type="checkbox" name="incluye" value="Almuerzo" class="accent-emerald-600"> Almuerzo</label>
+                            <label><input type="checkbox" name="incluye" value="Refrigerio" class="accent-emerald-600"> Refrigerio</label>
+                            <label><input type="checkbox" name="incluye" value="Cena" class="accent-emerald-600"> Cena</label>
+                            <label><input type="checkbox" name="incluye" value="Guías" class="accent-emerald-600"> Guías</label>
+                            <label><input type="checkbox" name="incluye" value="Pasaporte" class="accent-emerald-600"> Pasaporte</label>
+                            <label><input type="checkbox" name="incluye" value="Entrada" class="accent-emerald-600"> Entrada</label>
+                            <label><input type="checkbox" name="incluye" value="Reconocimiento" class="accent-emerald-600"> Reconocimiento</label>
+                            <label><input type="checkbox" name="incluye" value="Rifas" class="accent-emerald-600"> Rifas</label>
+                            <label><input type="checkbox" name="incluye" value="Estadía" class="accent-emerald-600"> Estadía</label>
+                            <label><input type="checkbox" name="incluye" value="Ducha" class="accent-emerald-600"> Ducha</label>
+                            <label><input type="checkbox" name="incluye" value="Servicios Sanitarios" class="accent-emerald-600"> Serv. Sanitarios</label>
+                            <label><input type="checkbox" name="incluye" value="Impuestos" class="accent-emerald-600"> Impuestos</label>
+                            <label><input type="checkbox" name="incluye" value="Tiquetes Aereos" class="accent-emerald-600"> Tiquetes Aéreos</label>
+                            
+                            <label><input type="checkbox" name="incluye" value="ZonaDeCamping" class="accent-emerald-600"> ZonaDeCamping</label>
+                            <label><input type="checkbox" name="incluye" value="PolizaDeViajero" class="accent-emerald-600"> PolizaDeViajero</label>
+                            <label><input type="checkbox" name="incluye" value="TaxiUberOtro" class="accent-emerald-600"> TaxiUberOtro</label>
+                            <label><input type="checkbox" name="incluye" value="Acarreo" class="accent-emerald-600"> Acarreo</label>
+                            <label><input type="checkbox" name="incluye" value="GuiasCertificados" class="accent-emerald-600"> GuiasCertificados</label>
+
+                            <label><input type="checkbox" name="incluye" value="Otros" id="checkOtros" onchange="toggleOtherDesc()" class="accent-emerald-600"> Otros</label>
+                        </div>
+                        <div id="otrosDescContainer" class="hidden mt-2">
+                            <label class="block text-sm font-bold mb-1 text-gray-800">Descripción de Otros:</label>
+                            <input type="text" id="otrosDescripcion" class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:border-emerald-500 focus:outline-none" placeholder="Especifique qué más incluye...">
+                        </div>
+                    </div>
+
+                    <!-- Itinerario -->
+                    <div class="mb-6">
+                        <label class="block text-lg font-bold mb-2 text-emerald-800">Itinerario Detallado</label>
+                        <textarea id="itinerario" rows="4" class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:border-emerald-500 focus:outline-none" placeholder="Describa el itinerario día por día o las actividades principales..."></textarea>
+                    </div>
+
+                    <!-- Equipo -->
+                    <div class="mb-6">
+                        <h3 class="font-bold text-lg mb-2 text-emerald-800">Equipo Requerido</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left text-gray-800">
+                                <thead class="bg-gray-100 border-b border-gray-200">
+                                    <tr>
+                                        <th class="p-2">Item</th>
+                                        <th class="p-2 text-center">Sí</th>
+                                        <th class="p-2 text-center">No</th>
+                                        <th class="p-2 text-center">Opcional</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="equipmentTableBody">
+                                    <!-- Se llena con JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Notas Adicionales -->
+                    <div class="mb-6">
+                        <label class="block text-lg font-bold mb-2 text-emerald-800">Notas Adicionales</label>
+                        <textarea id="notasAdicionales" rows="3" class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500" placeholder="Escriba notas adicionales o advertencias específicas aquí..."></textarea>
+                    </div>
+
+                    <!-- Botones de Acción -->
+                    <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                        <button type="button" onclick="toggleForm()" class="px-4 sm:px-6 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 text-sm sm:text-base">Cancelar</button>
+                        <button type="submit" class="px-4 sm:px-6 py-2 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-lg text-sm sm:text-base">Guardar Evento</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- LISTA DE CAMINATAS (Cards) -->
+            <div id="eventsContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Las tarjetas de eventos se inyectan aquí -->
+            </div>
+
+            <div id="eventsEmptyState" class="text-center py-20 text-gray-500 hidden">
+                <i class="fas fa-mountain text-6xl mb-4 text-gray-300"></i>
+                <p class="text-xl">No hay caminatas creadas aún.</p>
+                <button onclick="toggleForm()" class="mt-4 text-emerald-600 hover:underline">Crear la primera</button>
+            </div>
+
+        </div> <!-- Fin Vista Caminatas -->
+
+
+        <!-- ========================================== -->
+        <!-- VISTA 2: CONTACTOS                         -->
+        <!-- ========================================== -->
+        <div id="contactosView" class="hidden fade-in">
+            
+            <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-3 sm:gap-4 bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-200">
+                <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 text-center w-full md:w-auto"><i class="fas fa-users mr-2 text-emerald-600"></i>Directorio</h2>
+                <div class="w-full md:w-1/2 relative">
+                    <i class="fas fa-search absolute left-4 top-3 text-gray-400"></i>
+                    <input type="text" id="contactSearch" onkeyup="filterContacts()" placeholder="Buscar por nombre, cédula, sangre, teléfono..." class="w-full pl-11 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-emerald-500 bg-gray-50 text-gray-800 shadow-inner">
+                </div>
+            </div>
+
+            <div id="contactFormContainer" class="hidden bg-white rounded-xl shadow-2xl p-4 sm:p-6 mb-8 border-t-4 border-emerald-500">
+                <div class="flex justify-between items-center mb-6 border-b border-gray-200 pb-2">
+                    <h2 class="text-xl sm:text-2xl font-bold text-emerald-800" id="contactFormTitle">Agregar Nuevo Contacto</h2>
+                    <button onclick="toggleContactForm()" class="text-gray-500 hover:text-red-500 text-2xl leading-none">&times;</button>
+                </div>
+
+                <form id="contactForm" onsubmit="handleContactSubmit(event)">
+                    <input type="hidden" id="contactEditIndex" value="-1">
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div>
+                            <label class="block text-sm font-bold mb-1 text-gray-800">Nombre</label>
+                            <input type="text" id="contactoNombre" required class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-1 text-gray-800">Primer Apellido</label>
+                            <input type="text" id="contactoApellido1" required class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-1 text-gray-800">Segundo Apellido</label>
+                            <input type="text" id="contactoApellido2" class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-bold mb-1 text-gray-800">Cédula</label>
+                            <input type="text" id="contactoCedula" class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-1 text-gray-800">Pasaporte</label>
+                            <input type="text" id="contactoPasaporte" class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500" placeholder="Opcional">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-1 text-gray-800">Móvil</label>
+                            <input type="text" id="contactoMovil" required class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500" placeholder="Ej: 8888-8888">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-1 text-gray-800">Tipo de Sangre</label>
+                            <select id="contactoSangre" class="w-full border border-red-200 rounded p-2 bg-red-50 font-bold text-red-900 focus:outline-none focus:border-red-500">
+                                <option value="Desconocido">Desconocido</option>
+                                <option value="O+">O+</option>
+                                <option value="O-">O-</option>
+                                <option value="A+">A+</option>
+                                <option value="A-">A-</option>
+                                <option value="B+">B+</option>
+                                <option value="B-">B-</option>
+                                <option value="AB+">AB+</option>
+                                <option value="AB-">AB-</option>
+                                <option value="RHO+">RHO+</option>
+                                <option value="RHO-">RHO-</option>
+                                <option value="No recibe Transfusiones">No recibe Transfusiones</option>
+                            </select>
+                        </div>
+
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-bold mb-1 text-gray-800">Fecha de Nacimiento</label>
+                            <div class="flex gap-2">
+                                <input type="date" id="contactoNacimiento" onchange="calculateAge()" class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:outline-none focus:border-emerald-500">
+                                <input type="text" id="contactoEdad" readonly placeholder="Edad" class="w-24 bg-gray-100 border border-gray-300 rounded p-2 text-center font-bold text-gray-500 cursor-not-allowed">
+                            </div>
+                        </div>
+
+                        <div class="md:col-span-3 bg-red-50 p-4 rounded-lg border border-red-200 mt-2">
+                            <h3 class="font-bold text-red-800 mb-3"><i class="fas fa-heartbeat mr-2"></i>En Caso de Emergencia</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-bold mb-1 text-red-900">Contacto de Emergencia (Nombre)</label>
+                                    <input type="text" id="contactoEmergenciaNombre" required class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:outline-none focus:border-red-500" placeholder="Ej: María Pérez (Madre)">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-bold mb-1 text-red-900">Teléfono de Emergencia</label>
+                                    <input type="text" id="contactoEmergenciaTel" required class="w-full border border-gray-300 bg-white text-gray-800 rounded p-2 focus:outline-none focus:border-red-500" placeholder="Ej: 8888-8888">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-3 pt-4 border-t border-gray-200">
+                        <button type="button" onclick="toggleContactForm()" class="px-4 sm:px-6 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 text-sm sm:text-base">Cancelar</button>
+                        <button type="submit" class="px-4 sm:px-6 py-2 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700 shadow-lg text-sm sm:text-base">Guardar Contacto</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- LISTA DE CONTACTOS -->
+            <div id="contactsContainer" class="flex flex-col gap-3">
+                <!-- Se llena por JS -->
+            </div>
+
+            <div id="contactPagination" class="flex flex-wrap justify-center items-center gap-2 sm:gap-4 mt-8 hidden mb-6">
+                <!-- Se llena por JS -->
+            </div>
+
+            <div id="contactsEmptyState" class="text-center py-20 text-gray-500 hidden">
+                <i class="fas fa-address-book text-6xl mb-4 text-gray-300"></i>
+                <p class="text-xl">No hay contactos o coincidencias.</p>
+                <button onclick="toggleContactForm()" class="mt-4 text-emerald-600 hover:underline">Agregar un contacto</button>
+            </div>
+
+        </div> <!-- Fin Vista Contactos -->
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODALES                                    -->
+    <!-- ========================================== -->
+
+    <!-- MODAL DE ORACIÓN -->
+    <div id="oracionModal" class="fixed inset-0 bg-black bg-opacity-80 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col fade-in max-h-[90vh]">
+            <div class="p-4 flex justify-between items-center border-b border-gray-300 shrink-0 bg-[#f4f7f5]">
+                <h3 class="font-bold text-emerald-900 uppercase tracking-widest text-sm"><i class="fas fa-dove text-emerald-600 mr-2"></i>Momento de Reflexión</h3>
+                <button onclick="closeOracionModal()" class="text-gray-400 hover:text-red-500 text-2xl leading-none">&times;</button>
+            </div>
+            
+            <div id="prayerCardPNG" class="p-8 overflow-y-auto text-center leading-relaxed text-lg bg-[#f9f7f1] text-black font-sans relative">
+                <h2 class="text-2xl font-bold mb-6 text-emerald-800 tracking-wide uppercase border-b-2 border-emerald-800/20 inline-block pb-2">
+                    Oración de La Tribu de los Libres
+                </h2>
+                
+                <div id="prayerTextDisplay" class="whitespace-pre-line text-left sm:text-center text-base sm:text-lg">
+                </div>
+
+                <textarea id="prayerTextEdit" class="w-full hidden p-4 border border-emerald-300 rounded bg-white text-black focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base min-h-[300px]"></textarea>
+            </div>
+
+            <div class="p-4 bg-gray-50 border-t border-gray-300 shrink-0 flex justify-end gap-3 flex-wrap">
+                <button id="btnEditPrayer" onclick="toggleEditPrayer()" class="px-4 py-2 bg-emerald-100 text-emerald-800 font-bold rounded-lg hover:bg-emerald-200 transition">
+                    <i class="fas fa-edit mr-1"></i> Editar
+                </button>
+                <button id="btnSavePrayer" onclick="savePrayer()" class="hidden px-4 py-2 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition">
+                    <i class="fas fa-save mr-1"></i> Guardar Cambios
+                </button>
+                <button id="btnDownloadPrayer" onclick="downloadPrayerPNG()" class="px-4 py-2 bg-emerald-600 text-white font-bold rounded-lg hover:bg-emerald-700 transition shadow">
+                    <i class="fas fa-image mr-1"></i> Descargar Tarjeta
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MODAL DE CONTACTO ESPECÍFICO (Ficha Médica) -->
+    <div id="contactDetailsModal" class="fixed inset-0 bg-black bg-opacity-70 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden flex flex-col fade-in border border-gray-200">
+            <div class="p-3 sm:p-4 flex justify-between items-center bg-gray-50 border-b border-gray-200 shrink-0">
+                <h3 class="font-bold text-gray-800 text-sm sm:text-base"><i class="fas fa-address-card text-emerald-600 mr-2"></i>Ficha del Contacto</h3>
+                <button onclick="closeContactModal()" class="text-gray-500 hover:text-red-500 text-xl sm:text-2xl leading-none">&times;</button>
+            </div>
+            <div id="contactModalBody" class="w-full"></div>
+        </div>
+    </div>
+
+    <!-- MODAL PARA COMPARTIR PAGOS ESPECÍFICOS -->
+    <div id="paymentModal" class="fixed inset-0 bg-black bg-opacity-70 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden flex flex-col fade-in border border-gray-200">
+            <div class="p-4 flex justify-between items-center bg-gray-50 border-b border-gray-200">
+                <h3 class="font-bold text-gray-800"><i class="fas fa-share-alt text-emerald-600 mr-2"></i>Compartir Pagos</h3>
+                <button onclick="closePaymentModal()" class="text-gray-500 hover:text-red-500 text-2xl leading-none">&times;</button>
+            </div>
+            
+            <div id="paymentCardElement" class="p-6 bg-gradient-to-br from-emerald-800 to-emerald-950 text-white relative overflow-hidden">
+                <div class="absolute -bottom-4 -right-4 opacity-10 transform -rotate-12">
+                    <i class="fas fa-mountain text-9xl"></i>
+                </div>
+
+                <div id="payCardWarning" class="mb-4 bg-red-500/20 border border-red-500/50 p-3 rounded-lg text-white text-xs text-center relative z-10">
+                    <span id="payCardNotaLabel" class="block font-bold mb-1 hidden">(LEER NOTA ABAJO)</span>
+                    <strong class="uppercase text-sm">INSTRUCCIONES</strong><br>
+                    <i class="fas fa-exclamation-triangle mr-1"></i> No revele la hora ni lugar de Salida por nuestra seguridad
+                </div>
+                
+                <h2 class="text-2xl font-bold mb-1 uppercase tracking-tight relative z-10" id="payCardTitle">Nombre Caminata</h2>
+                <p class="text-emerald-300 text-sm mb-6 border-b border-emerald-700/50 pb-2 relative z-10">Opciones de Pago Oficiales</p>
+                
+                <div id="payCardSinpeBox" class="mb-4 bg-white/10 p-4 rounded-xl backdrop-blur-sm border border-white/10 relative z-10">
+                    <div class="flex items-center gap-2 mb-1">
+                        <i class="fas fa-mobile-alt text-emerald-400"></i>
+                        <span class="text-xs font-bold text-emerald-300 uppercase tracking-widest">SINPE Móvil</span>
+                    </div>
+                    <p id="payCardSinpe" class="font-bold text-base tracking-wide"></p>
+                </div>
+
+                <div id="payCardCuentaBox" class="bg-white/10 p-4 rounded-xl backdrop-blur-sm border border-white/10 relative z-10">
+                    <div class="flex items-center gap-2 mb-1">
+                        <i class="fas fa-university text-emerald-400"></i>
+                        <span class="text-xs font-bold text-emerald-300 uppercase tracking-widest">Transferencia Bancaria</span>
+                    </div>
+                    <p id="payCardCuenta" class="font-bold text-sm leading-tight"></p>
+                </div>
+                
+                <div class="mt-6 text-center relative z-10">
+                    <p class="text-[11px] text-emerald-400/80 font-medium">Por favor enviar el comprobante tras realizar el pago.</p>
+                </div>
+            </div>
+
+            <div class="p-4 flex gap-3 bg-gray-50 border-t border-gray-200">
+                <button id="btnSharePayWA" class="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-bold text-sm flex justify-center items-center transition shadow-md">
+                    <i class="fab fa-whatsapp text-lg mr-2"></i> Enviar Texto
+                </button>
+                <button id="btnDownloadPayPNG" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-bold text-sm flex justify-center items-center transition shadow-md">
+                    <i class="fas fa-image text-lg mr-2"></i> Guardar PNG
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PARA COMPARTIR PAGOS GLOBALES -->
+    <div id="globalPaymentModal" class="fixed inset-0 bg-black bg-opacity-70 z-[100] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden flex flex-col fade-in border border-gray-200 max-h-[90vh]">
+            <div class="p-4 flex justify-between items-center bg-gray-50 border-b border-gray-200 shrink-0">
+                <h3 class="font-bold text-gray-800"><i class="fas fa-wallet text-emerald-600 mr-2"></i>Pagos Generales</h3>
+                <button onclick="closeGlobalPaymentModal()" class="text-gray-500 hover:text-red-500 text-2xl leading-none">&times;</button>
+            </div>
+            
+            <div class="p-4 overflow-y-auto">
+                <div class="mb-4 space-y-3">
+                    <div>
+                        <label class="block text-xs font-bold mb-1 text-gray-800">Seleccionar SINPE</label>
+                        <select id="globalSinpeSelect" class="w-full border border-gray-300 bg-gray-50 text-gray-800 rounded p-2 text-sm focus:border-emerald-500 focus:outline-none" onchange="updateGlobalPaymentPreview()">
+                            <option value="">-- No incluir SINPE --</option>
+                            <option value="86529837 - Jenny Ceciliano Cordoba" selected>86529837 - Jenny Ceciliano Cordoba</option>
+                            <option value="87984232 - Jenny Ceciliano Cordoba">87984232 - Jenny Ceciliano Cordoba</option>
+                            <option value="86227500 - Kenneth Ruiz Matamoros">86227500 - Kenneth Ruiz Matamoros</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold mb-1 text-gray-800">Seleccionar CUENTA</label>
+                        <select id="globalCuentaSelect" class="w-full border border-gray-300 bg-gray-50 text-gray-800 rounded p-2 text-sm focus:border-emerald-500 focus:outline-none" onchange="updateGlobalPaymentPreview()">
+                            <option value="">-- No incluir Cuenta --</option>
+                            <option value="Jenny Ceciliano Cordoba (Colones MUCAP) - CR66080402010100715103" selected>Jenny Ceciliano Cordoba (Colones MUCAP) - CR66080402010100715103</option>
+                            <option value="Jenny Ceciliano Cordoba (Colones BCR) - CR62015202001268129163">Jenny Ceciliano Cordoba (Colones BCR) - CR62015202001268129163</option>
+                            <option value="Kenneth Ruiz Matamoros (Colones MUCAP) - CR19080403012501524778">Kenneth Ruiz Matamoros (Colones MUCAP) - CR19080403012501524778</option>
+                            <option value="Juan Carlos Ruiz (Colones BCR) - CR61015202001292863793">Juan Carlos Ruiz (Colones BCR) - CR61015202001292863793</option>
+                            <option value="Juan Carlos Ruiz (Dolares BCR) - CR50015202001410361158">Juan Carlos Ruiz (Dolares BCR) - CR50015202001410361158</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="globalPaymentCardElement" class="p-6 bg-gradient-to-br from-emerald-800 to-emerald-950 text-white relative overflow-hidden rounded-xl shadow-inner">
+                    <div class="absolute -bottom-4 -right-4 opacity-10 transform -rotate-12">
+                        <i class="fas fa-wallet text-9xl"></i>
+                    </div>
+
+                    <div class="mb-4 bg-red-500/20 border border-red-500/50 p-3 rounded-lg text-white text-xs text-center relative z-10">
+                        <strong class="uppercase text-sm">INSTRUCCIONES</strong><br>
+                        <i class="fas fa-exclamation-triangle mr-1"></i> No revele la hora ni lugar de Salida por nuestra seguridad
+                    </div>
+                    
+                    <small class="text-emerald-300 text-sm mb-6 border-b border-emerald-700/50 pb-2 relative z-10">La Tribu De Los Libres</small>
+                    <h2 class="text-2xl font-bold mb-1 uppercase tracking-tight relative z-10">MÉTODOS DE PAGO</h2>
+                    <p class="text-emerald-300 text-sm mb-6 border-b border-emerald-700/50 pb-2 relative z-10">Opciones Oficiales</p>
+                    
+                    <div id="globalPayCardSinpeBox" class="mb-4 bg-white/10 p-4 rounded-xl backdrop-blur-sm border border-white/10 relative z-10">
+                        <div class="flex items-center gap-2 mb-1">
+                            <i class="fas fa-mobile-alt text-emerald-400"></i>
+                            <span class="text-xs font-bold text-emerald-300 uppercase tracking-widest">SINPE Móvil</span>
+                        </div>
+                        <p id="globalPayCardSinpe" class="font-bold text-base tracking-wide"></p>
+                    </div>
+
+                    <div id="globalPayCardCuentaBox" class="bg-white/10 p-4 rounded-xl backdrop-blur-sm border border-white/10 relative z-10">
+                        <div class="flex items-center gap-2 mb-1">
+                            <i class="fas fa-university text-emerald-400"></i>
+                            <span class="text-xs font-bold text-emerald-300 uppercase tracking-widest">Transferencia Bancaria</span>
+                        </div>
+                        <p id="globalPayCardCuenta" class="font-bold text-sm leading-tight"></p>
+                    </div>
+                    
+                    <div class="mt-6 text-center relative z-10">
+                        <p class="text-[11px] text-emerald-400/80 font-medium">Por favor enviar el comprobante tras realizar el pago.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 flex gap-3 bg-gray-50 border-t border-gray-200 mt-auto shrink-0">
+                <button onclick="shareGlobalPaymentWA()" class="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-xl font-bold text-sm flex justify-center items-center transition shadow-md">
+                    <i class="fab fa-whatsapp text-lg mr-2"></i> Texto WA
+                </button>
+                <button id="btnDownloadGlobalPayPNG" onclick="downloadGlobalPaymentPNG()" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-bold text-sm flex justify-center items-center transition shadow-md">
+                    <i class="fas fa-image text-lg mr-2"></i> Guardar PNG
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- SCRIPTS -->
+    <script>
+        // --- LOGICA DE MENÚ HERRAMIENTAS COLAPSABLE ---
+        function initToolsMenu() {
+            const isCollapsed = localStorage.getItem('tribu_menu_collapsed') !== 'false'; // Por defecto true
+            const menuTop = document.getElementById('toolsMenuTop');
+            const menuBottom = document.getElementById('toolsMenuBottom');
+            const icon = document.getElementById('toolsMenuIcon');
+            
+            if (isCollapsed) {
+                menuTop.classList.add('hidden');
+                menuTop.classList.remove('flex');
+                menuBottom.classList.add('hidden');
+                menuBottom.classList.remove('flex');
+                icon.className = 'fas fa-chevron-down mr-2';
+            } else {
+                menuTop.classList.remove('hidden');
+                menuTop.classList.add('flex');
+                menuBottom.classList.remove('hidden');
+                menuBottom.classList.add('flex');
+                icon.className = 'fas fa-chevron-up mr-2';
+            }
+        }
+
+        function toggleToolsMenu() {
+            const menuTop = document.getElementById('toolsMenuTop');
+            const menuBottom = document.getElementById('toolsMenuBottom');
+            const icon = document.getElementById('toolsMenuIcon');
+            
+            if (menuTop.classList.contains('hidden')) {
+                menuTop.classList.remove('hidden');
+                menuTop.classList.add('flex');
+                menuBottom.classList.remove('hidden');
+                menuBottom.classList.add('flex');
+                icon.className = 'fas fa-chevron-up mr-2';
+                localStorage.setItem('tribu_menu_collapsed', 'false');
+            } else {
+                menuTop.classList.add('hidden');
+                menuTop.classList.remove('flex');
+                menuBottom.classList.add('hidden');
+                menuBottom.classList.remove('flex');
+                icon.className = 'fas fa-chevron-down mr-2';
+                localStorage.setItem('tribu_menu_collapsed', 'true');
+            }
+        }
+
+        // --- CONFIGURACIÓN DE DATOS ---
+        const equipmentList = [
+            'Hidratación', 'Tennis ligera', 'Tennis runner', 'Tennis Hiking baja', 
+            'Zapato Caña media', 'Zapato Caña alta', 'Bastones', 'Foco o Head-lamp', 
+            'Snacks', 'Repelente', 'Poncho', 'Guantes', 'Bloqueador', 'Ropa de Cambio',
+            'Pasaporte', 'Medicación (Crónicos)', 'Cargador Portatil'
+        ];
+
+        let events = [];
+        let contacts = [];
+
+        // --- SISTEMA DE TABS ---
+        let currentTab = 'caminatas';
+        function switchTab(tab) {
+            currentTab = tab;
+            const btnAction = document.getElementById('mainNavActionBtn');
+            
+            if (tab === 'caminatas') {
+                document.getElementById('caminatasView').classList.remove('hidden');
+                document.getElementById('contactosView').classList.add('hidden');
+                
+                btnAction.innerHTML = '<i class="fas fa-plus mr-1"></i> Nueva Caminata';
+                btnAction.onclick = toggleForm;
+
+                document.getElementById('tabCaminatas').className = "bg-gray-100 text-emerald-800 px-4 sm:px-6 py-2 rounded-t-lg font-bold text-sm sm:text-base whitespace-nowrap shadow-[0_-2px_5px_rgba(0,0,0,0.1)] relative z-10 border-t border-l border-r border-gray-300";
+                document.getElementById('tabContactos').className = "text-gray-500 hover:text-emerald-700 hover:bg-gray-200 px-4 sm:px-6 py-2 rounded-t-lg font-bold text-sm sm:text-base whitespace-nowrap border-t border-l border-r border-transparent transition-colors";
+            } else {
+                document.getElementById('caminatasView').classList.add('hidden');
+                document.getElementById('contactosView').classList.remove('hidden');
+                
+                btnAction.innerHTML = '<i class="fas fa-user-plus mr-1"></i> Nuevo Contacto';
+                btnAction.onclick = toggleContactForm;
+
+                document.getElementById('tabContactos').className = "bg-gray-100 text-emerald-800 px-4 sm:px-6 py-2 rounded-t-lg font-bold text-sm sm:text-base whitespace-nowrap shadow-[0_-2px_5px_rgba(0,0,0,0.1)] relative z-10 border-t border-l border-r border-gray-300";
+                document.getElementById('tabCaminatas').className = "text-gray-500 hover:text-emerald-700 hover:bg-gray-200 px-4 sm:px-6 py-2 rounded-t-lg font-bold text-sm sm:text-base whitespace-nowrap border-t border-l border-r border-transparent transition-colors";
+            }
+        }
+
+        // --- MANEJO DE BASES DE DATOS (IndexedDB & LocalStorage) ---
+        const DB_NAME = 'TribuDB';
+        const DB_VERSION = 2;
+        let db;
+
+        async function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onerror = event => reject('Error abriendo BD');
+                request.onsuccess = event => {
+                    db = event.target.result;
+                    resolve(db);
+                };
+                request.onupgradeneeded = event => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('caminatas')) {
+                        db.createObjectStore('caminatas', { keyPath: 'id' });
+                    }
+                    if (!db.objectStoreNames.contains('contactos')) {
+                        db.createObjectStore('contactos', { keyPath: 'id' });
+                    }
+                };
+            });
+        }
+
+        async function loadData() {
+            try {
+                await initDB();
+                const tx = db.transaction(['caminatas', 'contactos'], 'readonly');
+                const storeEvents = tx.objectStore('caminatas');
+                const storeContacts = tx.objectStore('contactos');
+                
+                const reqEvents = storeEvents.getAll();
+                const reqContacts = storeContacts.getAll();
+                
+                reqEvents.onsuccess = () => {
+                    events = reqEvents.result || [];
+                    if(events.length === 0) {
+                        const localData = localStorage.getItem('caminatas_events');
+                        if (localData) events = JSON.parse(localData);
+                    }
+                    renderEvents();
+                };
+
+                reqContacts.onsuccess = () => {
+                    contacts = reqContacts.result || [];
+                    if(contacts.length === 0) {
+                        const localData = localStorage.getItem('caminatas_contactos');
+                        if (localData) contacts = JSON.parse(localData);
+                    }
+                    renderContacts();
+                };
+
+            } catch (e) {
+                console.error("Error cargando BD", e);
+                const localEvents = localStorage.getItem('caminatas_events');
+                if (localEvents) events = JSON.parse(localEvents);
+                
+                const localContacts = localStorage.getItem('caminatas_contactos');
+                if (localContacts) contacts = JSON.parse(localContacts);
+
+                renderEvents();
+                renderContacts();
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('caminatas_events', JSON.stringify(events));
+            localStorage.setItem('caminatas_contactos', JSON.stringify(contacts));
+            saveToDB();
+        }
+
+        function saveToDB() {
+            if (!db) return;
+            const tx = db.transaction(['caminatas', 'contactos'], 'readwrite');
+            const storeEvents = tx.objectStore('caminatas');
+            const storeContacts = tx.objectStore('contactos');
+            
+            storeEvents.clear().onsuccess = () => { events.forEach(evt => storeEvents.add(evt)); };
+            storeContacts.clear().onsuccess = () => { contacts.forEach(c => storeContacts.add(c)); };
+        }
+
+        // --- INICIALIZACIÓN ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initToolsMenu(); 
+            renderEquipmentTable();
+            loadData();
+            setDefaultDates(); 
+            toggleActividad();
+            toggleDateInputs();
+            updateTimePreview();
+            renderPrayer(); 
+        });
+
+        // --- IMPORTAR / EXPORTAR JSON GENERAL (Incluyendo Oración) ---
+        function exportData() {
+            const payload = {
+                events: events,
+                contacts: contacts,
+                prayer: customPrayer
+            };
+            const dataStr = JSON.stringify(payload, null, 2);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `LaTribu_Backup_${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            showToast('Archivo JSON exportado correctamente');
+        }
+
+        function importData(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    if(confirm(`¿Deseas fusionar/reemplazar tus datos con los del archivo?`)) {
+                        if (Array.isArray(importedData)) {
+                            events = importedData;
+                        } 
+                        else {
+                            if (importedData.events) events = importedData.events;
+                            if (importedData.contacts) contacts = importedData.contacts;
+                            if (importedData.prayer) {
+                                customPrayer = importedData.prayer;
+                                localStorage.setItem('tribu_prayer', customPrayer);
+                                renderPrayer();
+                            }
+                        }
+
+                        saveData();
+                        renderEvents();
+                        renderContacts();
+                        showToast('Datos importados correctamente');
+                    }
+                } catch (err) {
+                    alert('Error al leer el archivo JSON: ' + err.message);
+                }
+                input.value = ''; 
+            };
+            reader.readAsText(file);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.classList.remove('translate-y-20');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20');
+            }, 3000);
+        }
+
+        // ==========================================
+        // LÓGICA MODAL DE ORACIÓN EDITABLE / PNG
+        // ==========================================
+        let defaultPrayerText = `GRACIAS SEÑOR POR ESTE HERMOSO DÍA QUE NOS HAS REGALADO.
+
+POR NUESTROS AMIGOS Y AMIGAS QUE NOS ACOMPAÑAN EN ESTA ACTIVIDAD Y AQUELLOS QUE NO PUDIERON ESTAR HOY CON NOSOTROS.
+
+NOS AMPARAMOS A TU PROTECCIÓN Y LA DE NUESTROS FAMILIARES QUE NOS ESPERAN EN CASA.
+
+PROTEGE A LOS INDEFENSOS QUE SUFREN LA AGRESIÓN Y ABANDONO DE CUALQUIER TIPO.
+
+PONEMOS A TODAS LAS PERSONAS QUE ESTÁN EN LOS HOSPITALES, A LOS PRIVADOS DE LIBERTAD Y DE MOVIMIENTO QUE DESEAN TENER LA OPORTUNIDAD QUE NOSOTROS TENEMOS EN ESTE DÍA... ACOMPÁÑALOS Y DALES FUERZA PARA VENCER SU ANGUSTIA.
+
+QUE TU PROTECCIÓN LLEGUE A LOS DEMÁS GRUPOS Y SENDERISTAS DEL MUNDO QUE COMPARTEN NUESTRA MISMA PASIÓN PARA QUE LLEVEMOS UN CORAZÓN PASIVO, ALEGRE Y SERENO CON UN ESPÍRITU PROTECTOR DE LA NATURALEZA Y NUESTRO ENTORNO, DISFRUTANDO ASÍ CADA PASO QUE DAMOS EN NUESTRA NACIÓN Y NUESTRA TIERRA.
+
+QUE HOY LA NATURALEZA Y LA MONTAÑA SE SOMETAN A TU ORDEN Y A TU PROTECCIÓN..... PARA QUE CONVIVAMOS CON ELLA DE MANERA PASIVA Y ARMONIOSA.
+
+FORTALECE NUESTRA AMISTAD, NUESTRA HERMANDAD Y DIOS CUBRA CON SU SANGRE PRECIOSA A ESTE GRUPO LLAMADO LA TRIBU.`;
+
+        let customPrayer = localStorage.getItem('tribu_prayer') || defaultPrayerText;
+
+        function renderPrayer() {
+            document.getElementById('prayerTextDisplay').textContent = customPrayer;
+            document.getElementById('prayerTextEdit').value = customPrayer;
+        }
+
+        function openOracionModal() {
+            renderPrayer();
+            document.getElementById('oracionModal').classList.remove('hidden');
+        }
+
+        function closeOracionModal() {
+            document.getElementById('oracionModal').classList.add('hidden');
+            document.getElementById('prayerTextDisplay').classList.remove('hidden');
+            document.getElementById('prayerTextEdit').classList.add('hidden');
+            document.getElementById('btnEditPrayer').classList.remove('hidden');
+            document.getElementById('btnDownloadPrayer').classList.remove('hidden');
+            document.getElementById('btnSavePrayer').classList.add('hidden');
+        }
+
+        function toggleEditPrayer() {
+            document.getElementById('prayerTextDisplay').classList.add('hidden');
+            document.getElementById('prayerTextEdit').classList.remove('hidden');
+            
+            document.getElementById('btnEditPrayer').classList.add('hidden');
+            document.getElementById('btnDownloadPrayer').classList.add('hidden');
+            document.getElementById('btnSavePrayer').classList.remove('hidden');
+        }
+
+        function savePrayer() {
+            customPrayer = document.getElementById('prayerTextEdit').value;
+            localStorage.setItem('tribu_prayer', customPrayer);
+            renderPrayer();
+
+            document.getElementById('prayerTextDisplay').classList.remove('hidden');
+            document.getElementById('prayerTextEdit').classList.add('hidden');
+            
+            document.getElementById('btnEditPrayer').classList.remove('hidden');
+            document.getElementById('btnDownloadPrayer').classList.remove('hidden');
+            document.getElementById('btnSavePrayer').classList.add('hidden');
+            
+            showToast('Oración guardada correctamente');
+        }
+
+        function downloadPrayerPNG() {
+            const card = document.getElementById('prayerCardPNG');
+            const btn = document.getElementById('btnDownloadPrayer');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Generando...';
+            btn.disabled = true;
+
+            html2canvas(card, { scale: 3, backgroundColor: null }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Oracion_La_Tribu.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                showToast('Tarjeta guardada correctamente.');
+            }).catch(err => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                showToast('Error al generar la imagen.');
+            });
+        }
+
+
+        // ==========================================
+        // LÓGICA DE CAMINATAS
+        // ==========================================
+        
+        function setDefaultDates() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('fechaUnica').value = today;
+            document.getElementById('fechaInicio').value = today;
+            document.getElementById('fechaRegreso').value = today;
+            document.getElementById('fechaIda').value = today;
+            document.getElementById('fechaRegresoInt').value = today;
+        }
+
+        function renderEquipmentTable() {
+            const tbody = document.getElementById('equipmentTableBody');
+            tbody.innerHTML = equipmentList.map((item, index) => {
+                let displayItem = item;
+                if (item === 'Hidratación') {
+                    displayItem = `<div class="flex items-center gap-2">
+                        <span class="font-bold">HIDRATACIÓN</span>
+                        <select id="hidratacionVol" class="border border-gray-300 rounded p-1 text-xs bg-gray-50 text-gray-800 focus:outline-none cursor-pointer">
+                            <option value="1.5L">1.5L</option>
+                            <option value="2L">2L</option>
+                            <option value="2.5L">2.5L</option>
+                        </select>
+                    </div>`;
+                }
+                return `
+                <tr class="border-b border-gray-200 hover:bg-gray-50">
+                    <td class="p-2 font-medium">${displayItem}</td>
+                    <td class="text-center"><input type="radio" name="equip_${index}" value="Si" class="accent-emerald-600 cursor-pointer"></td>
+                    <td class="text-center"><input type="radio" name="equip_${index}" value="No" class="accent-red-500 cursor-pointer"></td>
+                    <td class="text-center"><input type="radio" name="equip_${index}" value="Opcional" checked class="accent-blue-500 cursor-pointer"></td>
+                </tr>
+                `;
+            }).join('');
+        }
+
+        function toggleActividad() {
+            const actividad = document.getElementById('actividad').value;
+            const nationalFields = document.getElementById('nationalFields');
+            const internationalFields = document.getElementById('internationalFields');
+
+            if (actividad === 'Internacional') {
+                nationalFields.classList.add('hidden');
+                internationalFields.classList.remove('hidden');
+            } else {
+                nationalFields.classList.remove('hidden');
+                internationalFields.classList.add('hidden');
+            }
+        }
+
+        function toggleDateInputs() {
+            const dias = parseInt(document.getElementById('dias').value);
+            const singleGroup = document.getElementById('singleDateGroup');
+            const rangeGroup = document.getElementById('rangeDateGroup');
+            
+            if (dias === 1) {
+                singleGroup.classList.remove('hidden');
+                rangeGroup.classList.add('hidden');
+            } else {
+                singleGroup.classList.add('hidden');
+                rangeGroup.classList.remove('hidden');
+            }
+        }
+
+        function toggleOtherDesc() {
+            const check = document.getElementById('checkOtros');
+            const container = document.getElementById('otrosDescContainer');
+            if (check.checked) {
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        function updateTimePreview() {
+            const timeVal = document.getElementById('horaSalida').value;
+            const preview = document.getElementById('timePreview');
+            if(timeVal) {
+                preview.textContent = formatTime12h(timeVal);
+            } else {
+                preview.textContent = '';
+            }
+        }
+
+        function toggleForm() {
+            const form = document.getElementById('eventFormContainer');
+            form.classList.toggle('hidden');
+            if (!form.classList.contains('hidden')) {
+                form.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                resetForm();
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('hikeForm').reset();
+            document.getElementById('editIndex').value = "-1";
+            document.getElementById('formTitle').innerText = "Crear Nueva Caminata";
+            setDefaultDates();
+            toggleActividad();
+            toggleDateInputs();
+            toggleOtherDesc();
+            updateTimePreview(); 
+            equipmentList.forEach((_, idx) => {
+                const radios = document.getElementsByName(`equip_${idx}`);
+                for(let r of radios) { if(r.value === 'Opcional') r.checked = true; }
+            });
+        }
+
+        function formatTime12h(timeString) {
+            if (!timeString) return '';
+            const [hours, minutes] = timeString.split(':');
+            let h = parseInt(hours);
+            const m = minutes;
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12;
+            h = h ? h : 12; 
+            return `${h}:${m} ${ampm}`;
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const rawPuntos = document.getElementById('puntosRecogidaInput').value;
+            const puntosArray = rawPuntos.split(',').map(s => s.trim()).filter(s => s.length > 0);
+            const isInternacional = document.getElementById('actividad').value === 'Internacional';
+
+            const formData = {
+                id: Date.now(),
+                nombre: document.getElementById('nombre').value,
+                dificultad: document.getElementById('dificultad').value,
+                actividad: document.getElementById('actividad').value,
+                moneda: document.getElementById('moneda').value,
+                precio: document.getElementById('precio').value,
+                reserva: document.getElementById('reserva').value,
+                capacidad: document.getElementById('capacidad').value,
+                sinpe: document.getElementById('sinpe').value,
+                cuenta: document.getElementById('cuenta').value,
+                itinerario: document.getElementById('itinerario').value,
+                notasAdicionales: document.getElementById('notasAdicionales').value,
+                
+                isInternacional: isInternacional,
+
+                dias: parseInt(document.getElementById('dias').value),
+                horaSalida: document.getElementById('horaSalida').value,
+                lugarSalida: document.getElementById('lugarSalida').value,
+                fechaUnica: document.getElementById('fechaUnica').value,
+                fechaInicio: document.getElementById('fechaInicio').value,
+                fechaRegreso: document.getElementById('fechaRegreso').value,
+                puntosRecogida: puntosArray, 
+
+                pais: document.getElementById('pais').value,
+                destinoInternacional: document.getElementById('destinoInternacional').value,
+                fechaIda: document.getElementById('fechaIda').value,
+                horaIda: document.getElementById('horaIda').value,
+                aerolineaIda: document.getElementById('aerolineaIda').value,
+                vueloIda: document.getElementById('vueloIda').value,
+                fechaRegresoInt: document.getElementById('fechaRegresoInt').value,
+                horaRegresoInt: document.getElementById('horaRegresoInt').value,
+                aerolineaRegreso: document.getElementById('aerolineaRegreso').value,
+                vueloRegreso: document.getElementById('vueloRegreso').value,
+
+                incluye: Array.from(document.querySelectorAll('input[name="incluye"]:checked')).map(cb => cb.value),
+                otrosDescripcion: document.getElementById('otrosDescripcion').value,
+
+                equipo: equipmentList.map((item, index) => {
+                    const selected = document.querySelector(`input[name="equip_${index}"]:checked`).value;
+                    let finalItem = item;
+                    if (item === 'Hidratación') {
+                        const vol = document.getElementById('hidratacionVol').value;
+                        finalItem = `HIDRATACIÓN (${vol})`;
+                    }
+                    return { item: finalItem, estado: selected };
+                })
+            };
+
+            const editIndex = parseInt(document.getElementById('editIndex').value);
+
+            if (editIndex > -1) {
+                formData.id = events[editIndex].id;
+                events[editIndex] = formData;
+                showToast('Evento actualizado correctamente');
+            } else {
+                events.push(formData);
+                showToast('Evento creado correctamente');
+            }
+
+            saveData();
+            renderEvents();
+            toggleForm();
+        }
+
+        // WhatsApp Caminatas
+        function shareToWhatsApp(index) {
+            const evt = events[index];
+            const hasContent = (str) => str && str.trim() !== '' && str !== 'None';
+
+            let text = '';
+
+            if (evt.notasAdicionales && evt.notasAdicionales.trim() !== '') {
+                text += `*(LEER NOTA ABAJO)*\n`;
+            }
+            text += `*INSTRUCCIONES*\n⚠️ No revele la hora ni lugar de Salida por nuestra seguridad\n\n`;
+
+            text += `*${evt.nombre.toUpperCase()}*\n\n`;
+
+            if (hasContent(evt.actividad)) text += `- *ACTIVIDAD:* ${evt.actividad}\n`;
+            if (hasContent(evt.dificultad)) text += `- *DIFICULTAD:* ${evt.dificultad}\n`;
+            
+            if (evt.isInternacional) {
+                if (hasContent(evt.fechaIda) && hasContent(evt.fechaRegresoInt)) 
+                    text += `- *FECHAS:* Del ${evt.fechaIda} al ${evt.fechaRegresoInt}\n`;
+                text += `- *DESTINO:* ${evt.destinoInternacional}, ${evt.pais}\n`;
+            } else {
+                if (evt.dias === 1) {
+                    if (hasContent(evt.fechaUnica)) text += `- *FECHA:* ${evt.fechaUnica}\n`;
+                } else {
+                    if (hasContent(evt.fechaInicio) && hasContent(evt.fechaRegreso)) 
+                        text += `- *FECHAS:* Del ${evt.fechaInicio} al ${evt.fechaRegreso}\n`;
+                }
+            }
+
+            if (hasContent(evt.precio)) text += `- *PRECIO:* ${evt.moneda}${evt.precio}\n`;
+            if (hasContent(evt.reserva)) text += `- *RESERVA CON:* ${evt.moneda}${evt.reserva}\n`;
+            if (hasContent(evt.capacidad)) text += `- *CAPACIDAD:* ${evt.capacidad}\n`;
+            if (hasContent(evt.sinpe)) text += `- *SINPE:* ${evt.sinpe}\n`;
+            if (hasContent(evt.cuenta) && evt.cuenta !== 'Ninguna') text += `- *CUENTA:* ${evt.cuenta}\n`;
+
+            text += `\n`;
+
+            if (evt.isInternacional) {
+                text += `*✈️ VUELO DE IDA:*\n`;
+                text += `- *Fecha:* ${evt.fechaIda}\n`;
+                text += `- *Hora:* ${formatTime12h(evt.horaIda)}\n`;
+                text += `- *Aerolínea:* ${evt.aerolineaIda} (Vuelo: ${evt.vueloIda})\n\n`;
+
+                text += `*🛬 VUELO DE REGRESO:*\n`;
+                text += `- *Fecha:* ${evt.fechaRegresoInt}\n`;
+                text += `- *Hora:* ${formatTime12h(evt.horaRegresoInt)}\n`;
+                text += `- *Aerolínea:* ${evt.aerolineaRegreso} (Vuelo: ${evt.vueloRegreso})\n`;
+            } else {
+                if (hasContent(evt.horaSalida)) text += `- *SALIDA:* ${formatTime12h(evt.horaSalida)}\n`;
+                if (hasContent(evt.lugarSalida)) text += `- *LUGAR:* ${evt.lugarSalida}\n`;
+                if (evt.puntosRecogida && evt.puntosRecogida.length > 0) {
+                    text += `- *RECOGIDA:* ${evt.puntosRecogida.join(', ')}\n`;
+                }
+            }
+
+            text += `\n`;
+
+            if (evt.incluye && evt.incluye.length > 0) {
+                text += `*INCLUYE:*\n`;
+                evt.incluye.forEach(item => {
+                    if (item !== 'Otros') text += `- ${item}\n`;
+                });
+                if (evt.incluye.includes('Otros') && hasContent(evt.otrosDescripcion)) {
+                    text += `- ${evt.otrosDescripcion}\n`;
+                }
+                text += `\n`;
+            }
+
+            if (hasContent(evt.itinerario)) {
+                text += `*ITINERARIO:*\n${evt.itinerario}\n\n`;
+            }
+
+            if (evt.equipo && evt.equipo.length > 0) {
+                text += `*EQUIPO REQUERIDO:*\n`;
+                evt.equipo.forEach(e => {
+                    if (e.estado === 'Si') text += `- ${e.item}: Sí\n`;
+                    else if (e.estado === 'Opcional') text += `- ${e.item}: Opcional\n`;
+                    else if (e.estado === 'No') text += `- ${e.item}: No\n`;
+                });
+                text += `\n`;
+            }
+
+            text += `*OTRAS RECOMENDACIONES:*\n`;
+            text += `- Llevar Medicamentos personales (ES SU RESPONSABILIDAD)\n`;
+            text += `- Avisar a un familiar, conocido o coordinador si se va a rezagar.\n`;
+            text += `- Desayunaremos al llegar para evitar llevar peso.\n`;
+            text += `- Siempre es opcional: pasar a comer a la salida.\n`;
+            text += `- Evite arrecostarse a arboles o poner mochilas en el suelo (insectos).\n`;
+            text += `- Si hay culebras, estar atentos.\n\n`;
+
+            text += `*NORMAS GENERALES:*\n`;
+            text += `- Ser Puntuales por respeto a todos.\n`;
+            text += `- Nadie se queda atrás, ni se queda solo.\n`;
+            text += `- NO discutir por campos de la buseta. Respetar armonía.\n`;
+            text += `- NO participar si se siente mal.\n`;
+            text += `- NO criticar al rezagado ni al más rápido.\n`;
+            text += `- NO alterar ni dañar el entorno.\n\n`;
+
+            text += `*INDICACIONES DE SEGURIDAD:*\n`;
+            text += `- En caso de rayería, apagar dispositivos y alejarse de árboles.\n`;
+            text += `- Mantenga distancia de +3m en tormenta eléctrica.\n`;
+            text += `- Llevar Ropa de cambio (se queda en la buseta).\n`;
+            text += `- Es probable topar con lluvias, llevar poncho.\n`;
+            text += `- EN CASO DE DERRUMBE O RIESGO, SE SUSPENDE LA CAMINATA. NO ES RESPONSABILIDAD DE LA COORDINACIÓN SI EL CAMINO ESTÁ BLOQUEADO.\n`;
+            text += `- Si es alérgico, lleve su medicamento bajo su propio riesgo médico.\n`;
+            text += `- CADA UNO CAMINA LIBREMENTE CON NOSOTROS.\n\n`;
+
+            if (evt.notasAdicionales && evt.notasAdicionales.trim() !== '') {
+                text += `*NOTAS ADICIONALES:*\n${evt.notasAdicionales}`;
+            }
+
+            const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        }
+
+        // --- Render UI Caminatas ---
+        function renderEvents() {
+            const container = document.getElementById('eventsContainer');
+            const emptyState = document.getElementById('eventsEmptyState');
+            container.innerHTML = '';
+
+            if (events.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            events.forEach((evt, index) => {
+                let fechaDisplay = '';
+                let logisticaHtml = '';
+
+                if (evt.isInternacional) {
+                    fechaDisplay = `<span class="font-bold text-blue-700"><i class="fas fa-plane mr-1"></i> ${evt.fechaIda} al ${evt.fechaRegresoInt}</span>`;
+                    logisticaHtml = `
+                        <p><i class="fas fa-globe-americas text-blue-500 w-5"></i> <strong>Destino:</strong> ${evt.destinoInternacional}, ${evt.pais}</p>
+                        <p><i class="fas fa-plane-departure text-blue-500 w-5"></i> <strong>IDA:</strong> ${formatTime12h(evt.horaIda)} | ${evt.aerolineaIda} (${evt.vueloIda})</p>
+                        <p><i class="fas fa-plane-arrival text-blue-500 w-5"></i> <strong>REGRESO:</strong> ${formatTime12h(evt.horaRegresoInt)} | ${evt.aerolineaRegreso} (${evt.vueloRegreso})</p>
+                    `;
+                } else {
+                    if (evt.dias === 1) {
+                        fechaDisplay = `<span class="font-bold text-emerald-700"><i class="far fa-calendar-alt mr-1"></i> ${evt.fechaUnica || 'Por definir'}</span>`;
+                    } else {
+                        fechaDisplay = `<span class="font-bold text-emerald-700"><i class="far fa-calendar-alt mr-1"></i> ${evt.fechaInicio} al ${evt.fechaRegreso}</span>`;
+                    }
+                    const horaAmPm = formatTime12h(evt.horaSalida);
+                    logisticaHtml = `
+                        <p><i class="fas fa-clock text-emerald-500 w-5"></i> <strong>Salida:</strong> ${horaAmPm} | ${evt.lugarSalida}</p>
+                        <div>
+                            <i class="fas fa-bus text-emerald-500 w-5"></i> <strong>Recogida:</strong>
+                            <span class="text-gray-600">${evt.puntosRecogida.join(', ') || 'N/A'}</span>
+                        </div>
+                    `;
+                }
+
+                const equipmentHtml = evt.equipo.map(eq => {
+                    let colorClass = "text-gray-500";
+                    if(eq.estado === 'Si') { colorClass = "text-emerald-600 font-bold"; }
+                    if(eq.estado === 'No') { colorClass = "text-red-400 opacity-50"; }
+                    if(eq.estado === 'Opcional') { colorClass = "text-blue-500"; }
+                    
+                    return `<li class="flex justify-between border-b border-dashed border-gray-200 py-1 ${eq.estado === 'No' ? 'hidden' : ''}">
+                        <span>- ${eq.item}</span>
+                        <span class="${colorClass} text-sm">${eq.estado}</span>
+                    </li>`;
+                }).join('');
+
+                const otrosText = evt.incluye.includes('Otros') && evt.otrosDescripcion 
+                    ? `<div class="mt-1 text-sm text-gray-600 italic border-l-2 border-emerald-400 pl-2">"${evt.otrosDescripcion}"</div>` 
+                    : '';
+
+                const card = document.createElement('div');
+                card.className = "bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 flex flex-col";
+                card.innerHTML = `
+                    <div class="bg-emerald-600 text-white p-4">
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-xl font-bold uppercase tracking-wide">${evt.nombre}</h3>
+                            <span class="bg-white text-emerald-700 text-xs font-bold px-2 py-1 rounded shadow">${evt.dificultad}</span>
+                        </div>
+                        <div class="mt-2 text-white/80 text-sm flex gap-4">
+                            <span><i class="fas fa-${evt.isInternacional ? 'plane' : 'hiking'}"></i> ${evt.actividad}</span>
+                            <span><i class="fas fa-users"></i> Cupo: ${evt.capacidad}</span>
+                        </div>
+                    </div>
+
+                    <div class="p-5 flex-grow">
+                        <div class="grid grid-cols-2 gap-4 mb-4 bg-emerald-50 p-2 sm:p-3 rounded-lg border border-emerald-200 text-gray-800">
+                            <div class="col-span-2 text-center text-lg mb-1 border-b border-emerald-200 pb-2">
+                                ${fechaDisplay}
+                            </div>
+                            <div class="text-center">
+                                <span class="block text-xs text-gray-500 uppercase">Precio</span>
+                                <span class="text-xl font-bold">${evt.moneda} ${evt.precio}</span>
+                            </div>
+                             <div class="text-center">
+                                <span class="block text-xs text-gray-500 uppercase">Reserva</span>
+                                <span class="text-lg font-bold">${evt.moneda} ${evt.reserva}</span>
+                            </div>
+                            <div class="col-span-2 text-center border-t border-emerald-200 mt-2 pt-2">
+                                <span class="block text-xs text-gray-500 uppercase">SINPE</span>
+                                <span class="text-sm font-bold">${evt.sinpe || 'No asignado'}</span>
+                            </div>
+                            <div class="col-span-2 text-center border-t border-emerald-200 pt-2">
+                                <span class="block text-xs text-gray-500 uppercase">CUENTA</span>
+                                <span class="text-sm font-bold">${evt.cuenta && evt.cuenta !== 'Ninguna' ? evt.cuenta : 'No asignada'}</span>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3 text-sm text-gray-800">
+                            ${logisticaHtml}
+                            <div>
+                                <i class="fas fa-star text-emerald-500 w-5"></i> <strong>Incluye:</strong>
+                                <div class="flex flex-wrap gap-1 mt-1">
+                                    ${evt.incluye.map(i => `<span class="bg-gray-100 text-xs px-2 py-1 rounded border border-gray-200">${i}</span>`).join('')}
+                                </div>
+                                ${otrosText}
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <details class="group bg-gray-50 rounded-lg border border-gray-200">
+                                <summary class="flex justify-between items-center cursor-pointer p-3 font-bold text-emerald-700 hover:bg-emerald-100 text-xs sm:text-sm">
+                                    <span><i class="fas fa-clipboard-list mr-2"></i>Ver Detalles, Equipo y Normas</span>
+                                    <span class="transition group-open:rotate-180"><i class="fas fa-chevron-down"></i></span>
+                                </summary>
+                                <div class="p-4 text-sm space-y-6 text-gray-800 bg-white">
+                                    ${evt.itinerario ? `
+                                    <div>
+                                        <h4 class="font-bold text-emerald-800 border-b border-gray-200 mb-2">ITINERARIO</h4>
+                                        <p class="whitespace-pre-line text-gray-600">${evt.itinerario}</p>
+                                    </div>` : ''}
+
+                                    <div>
+                                        <h4 class="font-bold text-emerald-800 border-b border-gray-200 mb-2">EQUIPO REQUERIDO</h4>
+                                        <ul class="space-y-1">${equipmentHtml}</ul>
+                                    </div>
+
+                                    <div>
+                                        <h4 class="font-bold text-emerald-800 border-b border-gray-200 mb-2">OTRAS RECOMENDACIONES</h4>
+                                        <ul class="space-y-1 text-xs">
+                                            <li>- Llevar Medicamentos personales (ES SU RESPONSABILIDAD)</li>
+                                            <li>- Avisar a un familiar, compañer@ o conocido que se va a rezagar momentaneamente.</li>
+                                            <li>- Desayunaremos al llegar para evitar llevar peso.</li>
+                                            <li>- Siempre es opcional: pasar a comer a la salida (Decisión grupal).</li>
+                                            <li>- Evite arrecostarse a arboles o poner mochilas en el suelo (insectos).</li>
+                                            <li>- Si hay culebras, estar atentos.</li>
+                                        </ul>
+                                    </div>
+
+                                    <div>
+                                        <h4 class="font-bold text-emerald-800 border-b border-gray-200 mb-2">NORMAS GENERALES</h4>
+                                        <ul class="space-y-1 text-xs">
+                                            <li>- Ser Puntuales por respeto a l@s compañer@s.</li>
+                                            <li>- Nadie se queda atrás, ni se queda solo.</li>
+                                            <li>- NO discutir por campos de la buseta. Respetar armonía.</li>
+                                            <li>- NO participar si se siente mal o tiene compromisos tarde.</li>
+                                            <li>- NO criticar al rezagado ni al más rápido.</li>
+                                            <li>- NO alterar ni dañar el entorno.</li>
+                                        </ul>
+                                    </div>
+
+                                    <div>
+                                        <h4 class="font-bold text-red-800 border-b border-red-200 mb-2">INDICACIONES DE SEGURIDAD</h4>
+                                        <ul class="space-y-1 text-xs text-gray-600">
+                                            <li>- En caso de rayería, no abracemos árboles y apaguemos dispositivos.</li>
+                                            <li>- Mantenga distancia de +3m en tormenta eléctrica.</li>
+                                            <li>- Llevar Ropa de cambio (se queda en la buseta).</li>
+                                            <li>- Es probable topar con lluvias, llevar poncho.</li>
+                                            <li class="font-bold text-red-600">- EN CASO DE DERRUMBE O RIESGO, SE SUSPENDE LA CAMINATA. NO ES RESPONSABILIDAD DE LA COORDINACIÓN SI EL CAMINO ESTÁ BLOQUEADO.</li>
+                                            <li>- Si es alérgico, lleve su medicamento (Cetirizina, etc) bajo su propio riesgo médico.</li>
+                                            <li class="font-bold italic">- CADA UNO CAMINA LIBREMENTE CON NOSOTROS.</li>
+                                        </ul>
+                                    </div>
+
+                                    ${evt.notasAdicionales && evt.notasAdicionales.trim() !== '' ? `
+                                    <div class="bg-yellow-50 p-3 rounded border border-yellow-200">
+                                        <h4 class="font-bold text-yellow-800 border-b border-yellow-300 mb-2">NOTAS ADICIONALES</h4>
+                                        <p class="whitespace-pre-line text-yellow-900">${evt.notasAdicionales}</p>
+                                    </div>` : ''}
+                                </div>
+                            </details>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 p-3 flex flex-wrap justify-between items-center border-t border-gray-200 gap-2">
+                        <button onclick="shareToWhatsApp(${index})" class="text-green-600 hover:text-green-800 font-bold text-sm px-3 py-1 hover:bg-green-100 rounded flex items-center">
+                            <i class="fab fa-whatsapp mr-1 text-lg"></i> Compartir Info
+                        </button>
+                        
+                        <button onclick="openPaymentModal(${index})" class="text-purple-600 hover:text-purple-800 font-bold text-sm px-3 py-1 hover:bg-purple-100 rounded flex items-center shadow-sm border border-purple-200 bg-white">
+                            <i class="fas fa-money-check-alt mr-1"></i> Formas Pago
+                        </button>
+
+                        <div class="flex gap-2 w-full mt-2 pt-2 border-t border-gray-200 justify-end sm:w-auto sm:mt-0 sm:pt-0 sm:border-t-0">
+                            <button onclick="loadEventForEdit(${index})" class="text-gray-600 hover:text-gray-800 font-bold text-sm px-3 py-1 hover:bg-gray-200 rounded">
+                                <i class="fas fa-edit mr-1"></i> Editar
+                            </button>
+                            
+                            <button id="btn-del-${index}" onclick="deleteStep(${index}, 0)" class="text-red-500 hover:text-red-700 font-bold text-sm px-3 py-1 hover:bg-red-100 rounded transition-all duration-300">
+                                <i class="fas fa-trash-alt mr-1"></i> Eliminar
+                            </button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function loadEventForEdit(index) {
+            const evt = events[index];
+            document.getElementById('editIndex').value = index;
+            document.getElementById('formTitle').innerText = "Editar Caminata";
+
+            document.getElementById('nombre').value = evt.nombre;
+            document.getElementById('dificultad').value = evt.dificultad;
+            document.getElementById('actividad').value = evt.actividad;
+            document.getElementById('moneda').value = evt.moneda;
+            document.getElementById('precio').value = evt.precio;
+            document.getElementById('reserva').value = evt.reserva;
+            document.getElementById('sinpe').value = evt.sinpe || '86529837 - Jenny Ceciliano Cordoba';
+            document.getElementById('cuenta').value = evt.cuenta || 'Ninguna';
+            document.getElementById('itinerario').value = evt.itinerario || '';
+            document.getElementById('otrosDescripcion').value = evt.otrosDescripcion || '';
+            document.getElementById('notasAdicionales').value = evt.notasAdicionales || '';
+            
+            const capSelect = document.getElementById('capacidad');
+            if (evt.capacidad && !Array.from(capSelect.options).some(opt => opt.value == evt.capacidad)) {
+                capSelect.add(new Option(evt.capacidad, evt.capacidad));
+            }
+            capSelect.value = evt.capacidad || '14-17';
+
+            toggleActividad();
+            
+            if (evt.isInternacional) {
+                document.getElementById('pais').value = evt.pais || 'Panamá';
+                document.getElementById('destinoInternacional').value = evt.destinoInternacional || '';
+                document.getElementById('fechaIda').value = evt.fechaIda || '';
+                document.getElementById('horaIda').value = evt.horaIda || '';
+                document.getElementById('aerolineaIda').value = evt.aerolineaIda || '';
+                document.getElementById('vueloIda').value = evt.vueloIda || '';
+                document.getElementById('fechaRegresoInt').value = evt.fechaRegresoInt || '';
+                document.getElementById('horaRegresoInt').value = evt.horaRegresoInt || '';
+                document.getElementById('aerolineaRegreso').value = evt.aerolineaRegreso || '';
+                document.getElementById('vueloRegreso').value = evt.vueloRegreso || '';
+            } else {
+                document.getElementById('dias').value = evt.dias;
+                document.getElementById('horaSalida').value = evt.horaSalida;
+                document.getElementById('lugarSalida').value = evt.lugarSalida;
+                
+                toggleDateInputs();
+                document.getElementById('fechaUnica').value = evt.fechaUnica;
+                document.getElementById('fechaInicio').value = evt.fechaInicio;
+                document.getElementById('fechaRegreso').value = evt.fechaRegreso;
+
+                if(evt.puntosRecogida && Array.isArray(evt.puntosRecogida)) {
+                    document.getElementById('puntosRecogidaInput').value = evt.puntosRecogida.join(', ');
+                } else {
+                    document.getElementById('puntosRecogidaInput').value = '';
+                }
+            }
+
+            document.querySelectorAll('input[name="incluye"]').forEach(cb => {
+                cb.checked = evt.incluye.includes(cb.value);
+            });
+            toggleOtherDesc();
+
+            evt.equipo.forEach((eq, idx) => {
+                const radios = document.getElementsByName(`equip_${idx}`);
+                for(let r of radios) {
+                    if(r.value === eq.estado) r.checked = true;
+                }
+                if (equipmentList[idx] === 'Hidratación') {
+                    const match = eq.item.match(/\((.*?)\)/);
+                    if (match) {
+                        const volSelect = document.getElementById('hidratacionVol');
+                        if (volSelect) {
+                            if (!Array.from(volSelect.options).some(opt => opt.value === match[1])) {
+                                volSelect.add(new Option(match[1], match[1]));
+                            }
+                            volSelect.value = match[1];
+                        }
+                    }
+                }
+            });
+
+            updateTimePreview(); 
+            const form = document.getElementById('eventFormContainer');
+            form.classList.remove('hidden');
+            form.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        let deleteTimers = {};
+        function deleteStep(index, step) {
+            const btn = document.getElementById(`btn-del-${index}`);
+            if (deleteTimers[index]) clearTimeout(deleteTimers[index]);
+
+            if (step === 0) {
+                btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ¿Seguro?';
+                btn.className = "bg-orange-100 text-orange-600 font-bold text-sm px-3 py-1 rounded border border-orange-200 shadow-inner";
+                btn.onclick = () => deleteStep(index, 1);
+                deleteTimers[index] = setTimeout(() => resetDeleteBtn(index), 3000);
+            } 
+            else if (step === 1) {
+                btn.innerHTML = '<i class="fas fa-skull-crossbones"></i> CONFIRMAR FINAL';
+                btn.className = "bg-red-600 text-white font-bold text-sm px-3 py-1 rounded shadow-lg animate-pulse";
+                btn.onclick = () => deleteStep(index, 2);
+                deleteTimers[index] = setTimeout(() => resetDeleteBtn(index), 3000);
+            } 
+            else if (step === 2) {
+                events.splice(index, 1);
+                saveData();
+                renderEvents();
+                showToast('Evento eliminado');
+            }
+        }
+
+        function resetDeleteBtn(index) {
+            const btn = document.getElementById(`btn-del-${index}`);
+            if(btn) {
+                btn.innerHTML = '<i class="fas fa-trash-alt mr-1"></i> Eliminar';
+                btn.className = "text-red-500 hover:text-red-700 font-bold text-sm px-3 py-1 hover:bg-red-100 rounded transition-all duration-300";
+                btn.onclick = () => deleteStep(index, 0);
+            }
+        }
+
+
+        // ==========================================
+        // LÓGICA DE CONTACTOS (AGENDA)
+        // ==========================================
+        
+        let currentContactPage = 1;
+        const contactsPerPage = 30;
+        let contactSearchQuery = "";
+
+        function calculateAge() {
+            const birthDateStr = document.getElementById('contactoNacimiento').value;
+            const ageInput = document.getElementById('contactoEdad');
+            if(!birthDateStr) {
+                ageInput.value = "";
+                return;
+            }
+            
+            const dob = new Date(birthDateStr);
+            const today = new Date();
+            let age = today.getFullYear() - dob.getFullYear();
+            const m = today.getMonth() - dob.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+                age--;
+            }
+            ageInput.value = age + " años";
+        }
+
+        function toggleContactForm() {
+            const form = document.getElementById('contactFormContainer');
+            form.classList.toggle('hidden');
+            if (!form.classList.contains('hidden')) {
+                form.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                document.getElementById('contactForm').reset();
+                document.getElementById('contactEditIndex').value = "-1";
+                document.getElementById('contactFormTitle').innerText = "Agregar Nuevo Contacto";
+                document.getElementById('contactoEdad').value = "";
+            }
+        }
+
+        function handleContactSubmit(e) {
+            e.preventDefault();
+            
+            const formData = {
+                id: Date.now(),
+                nombre: document.getElementById('contactoNombre').value.trim(),
+                apellido1: document.getElementById('contactoApellido1').value.trim(),
+                apellido2: document.getElementById('contactoApellido2').value.trim(),
+                cedula: document.getElementById('contactoCedula').value.trim(),
+                pasaporte: document.getElementById('contactoPasaporte').value.trim(),
+                movil: document.getElementById('contactoMovil').value.trim(),
+                nacimiento: document.getElementById('contactoNacimiento').value,
+                edadStr: document.getElementById('contactoEdad').value,
+                sangre: document.getElementById('contactoSangre').value,
+                emergenciaNombre: document.getElementById('contactoEmergenciaNombre').value.trim(),
+                emergenciaTel: document.getElementById('contactoEmergenciaTel').value.trim()
+            };
+
+            const editIndex = parseInt(document.getElementById('contactEditIndex').value);
+
+            if (editIndex > -1) {
+                formData.id = contacts[editIndex].id;
+                contacts[editIndex] = formData;
+                showToast('Contacto actualizado correctamente');
+            } else {
+                contacts.push(formData);
+                showToast('Contacto agregado a la agenda');
+            }
+
+            saveData();
+            filterContacts(); // Re-render y aplicar búsqueda actual
+            toggleContactForm();
+        }
+
+        function filterContacts() {
+            contactSearchQuery = document.getElementById('contactSearch').value.toLowerCase();
+            currentContactPage = 1; // Reiniciar página al buscar
+            renderContacts();
+        }
+
+        function changeContactPage(delta) {
+            currentContactPage += delta;
+            renderContacts();
+            document.getElementById('contactSearch').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Renderiza Contactos como Lista y no como Cards
+        function renderContacts() {
+            const container = document.getElementById('contactsContainer');
+            const emptyState = document.getElementById('contactsEmptyState');
+            const paginationContainer = document.getElementById('contactPagination');
+            container.innerHTML = '';
+
+            // 1. Filtrar
+            let filteredContacts = contacts.filter(c => {
+                const term = contactSearchQuery;
+                return (c.nombre || '').toLowerCase().includes(term) ||
+                       (c.apellido1 || '').toLowerCase().includes(term) ||
+                       (c.apellido2 || '').toLowerCase().includes(term) ||
+                       (c.cedula || '').toLowerCase().includes(term) ||
+                       (c.pasaporte || '').toLowerCase().includes(term) ||
+                       (c.movil || '').toLowerCase().includes(term) ||
+                       (c.sangre || '').toLowerCase().includes(term);
+            });
+
+            if (filteredContacts.length === 0) {
+                emptyState.classList.remove('hidden');
+                paginationContainer.classList.add('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            // 2. Ordenar alfabéticamente por Nombre
+            filteredContacts.sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+            // 3. Paginación
+            const totalPages = Math.ceil(filteredContacts.length / contactsPerPage);
+            if (currentContactPage > totalPages) currentContactPage = totalPages;
+            if (currentContactPage < 1) currentContactPage = 1;
+
+            const startIndex = (currentContactPage - 1) * contactsPerPage;
+            const paginatedContacts = filteredContacts.slice(startIndex, startIndex + contactsPerPage);
+
+            // 4. Renderizar Filas de Lista
+            paginatedContacts.forEach((contact) => {
+                const originalIndex = contacts.indexOf(contact); // Necesario para edición/borrado exacto
+                
+                const item = document.createElement('div');
+                item.className = "flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-3 sm:p-4 rounded-xl shadow-sm border border-gray-200 hover:bg-emerald-50 hover:border-emerald-300 cursor-pointer transition gap-2";
+                item.onclick = () => openContactModal(originalIndex);
+                
+                item.innerHTML = `
+                    <div class="flex items-center gap-3 w-full sm:w-auto overflow-hidden">
+                        <div class="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center font-bold text-lg shrink-0">
+                            ${contact.nombre.charAt(0)}${contact.apellido1 ? contact.apellido1.charAt(0) : ''}
+                        </div>
+                        <div class="flex-grow min-w-0">
+                            <h3 class="font-bold text-gray-800 text-base sm:text-lg leading-tight truncate">${contact.nombre} ${contact.apellido1} ${contact.apellido2 || ''}</h3>
+                            <div class="flex items-center gap-2 text-[10px] sm:text-xs font-semibold uppercase tracking-wider mt-1">
+                                <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded border border-red-200 truncate max-w-full" title="${contact.sangre}">${contact.sangre}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-gray-800 font-bold text-sm sm:text-base sm:text-right w-full sm:w-auto pl-12 sm:pl-0 mt-1 sm:mt-0 truncate">
+                        <i class="fas fa-phone-alt text-emerald-500 mr-1"></i> ${contact.movil}
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+
+            // 5. Renderizar controles de paginación si hay más de 1 página
+            if (totalPages > 1) {
+                paginationContainer.classList.remove('hidden');
+                paginationContainer.innerHTML = `
+                    <button onclick="changeContactPage(-1)" ${currentContactPage === 1 ? 'disabled class="px-4 py-2 bg-gray-200 text-gray-400 rounded-lg cursor-not-allowed"' : 'class="px-4 py-2 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 font-bold rounded-lg transition shadow-sm"'}>
+                        <i class="fas fa-chevron-left mr-1"></i> Anterior
+                    </button>
+                    <span class="font-bold text-gray-600 text-sm">Página ${currentContactPage} de ${totalPages}</span>
+                    <button onclick="changeContactPage(1)" ${currentContactPage === totalPages ? 'disabled class="px-4 py-2 bg-gray-200 text-gray-400 rounded-lg cursor-not-allowed"' : 'class="px-4 py-2 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 font-bold rounded-lg transition shadow-sm"'}>
+                        Siguiente <i class="fas fa-chevron-right ml-1"></i>
+                    </button>
+                `;
+            } else {
+                paginationContainer.classList.add('hidden');
+            }
+        }
+
+        // Lógica Modal Contacto (Ficha Médica)
+        function openContactModal(index) {
+            const contact = contacts[index];
+            const modalBody = document.getElementById('contactModalBody');
+            
+            const pasaporteHtml = contact.pasaporte ? `<span class="ml-2 border-l border-gray-300 pl-2"><i class="fas fa-passport mr-1"></i> ${contact.pasaporte}</span>` : '';
+            
+            // Logica especial visual para texto largo de Transfusiones
+            const isNoTransfusion = contact.sangre === 'No recibe Transfusiones';
+            const sangreLabelHtml = isNoTransfusion
+                ? `<span class="text-[10px] sm:text-xs font-black leading-tight block px-1">NO RECIBE<br>TRANSFUSIONES</span>`
+                : `<span class="text-xl font-black">${contact.sangre}</span>`;
+
+            modalBody.innerHTML = `
+                <div id="contact-card-png-${index}" class="bg-white relative">
+                    <div class="h-2 bg-emerald-600 w-full"></div>
+                    <div class="p-4 sm:p-5">
+                        <div class="flex justify-between items-start mb-3 border-b border-gray-200 pb-3 gap-2">
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-lg sm:text-xl font-bold text-gray-800 leading-tight truncate" title="${contact.nombre} ${contact.apellido1} ${contact.apellido2 || ''}">${contact.nombre} <br><span class="text-emerald-600">${contact.apellido1} ${contact.apellido2}</span></h3>
+                                <p class="text-[10px] sm:text-xs text-gray-500 uppercase mt-1 tracking-wider overflow-hidden text-ellipsis whitespace-nowrap">
+                                    <i class="fas fa-id-card mr-1"></i> ${contact.cedula || 'N/A'} ${pasaporteHtml}
+                                </p>
+                            </div>
+                            <div class="bg-red-100 border border-red-200 text-red-700 px-2 py-1.5 sm:px-3 sm:py-2 rounded-lg text-center shadow-sm shrink-0 flex flex-col justify-center min-w-[70px]">
+                                <span class="block text-[8px] sm:text-[10px] uppercase font-bold opacity-70 mb-0.5">SANGRE</span>
+                                ${sangreLabelHtml}
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3 mb-4 text-xs sm:text-sm">
+                            <div class="min-w-0">
+                                <span class="block text-[10px] text-gray-400 uppercase font-bold">Móvil</span>
+                                <p class="font-bold text-gray-800 truncate"><i class="fas fa-phone-alt text-emerald-500 mr-1"></i> ${contact.movil}</p>
+                            </div>
+                            <div class="min-w-0">
+                                <span class="block text-[10px] text-gray-400 uppercase font-bold">Nacimiento</span>
+                                <p class="font-bold text-gray-800 truncate"><i class="fas fa-birthday-cake text-emerald-500 mr-1"></i> ${contact.nacimiento ? new Date(contact.nacimiento).toLocaleDateString() : 'N/A'} <span class="text-[10px] sm:text-xs font-normal text-gray-500">(${contact.edadStr || '-'})</span></p>
+                            </div>
+                        </div>
+
+                        <div class="bg-red-600 rounded-lg p-3 text-white shadow-inner">
+                            <h4 class="text-[10px] sm:text-xs uppercase font-black tracking-wider mb-1 opacity-90"><i class="fas fa-heartbeat mr-1"></i> En Caso de Emergencia</h4>
+                            <p class="font-bold text-xs sm:text-sm truncate" title="${contact.emergenciaNombre}">${contact.emergenciaNombre}</p>
+                            <p class="font-bold text-base sm:text-lg mt-1"><i class="fas fa-phone text-white/70 mr-1"></i> ${contact.emergenciaTel}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 p-2 sm:p-3 flex flex-wrap justify-between sm:justify-end items-center border-t border-gray-200 gap-2">
+                    <div class="flex gap-2 w-full sm:w-auto justify-center sm:justify-start">
+                        <button onclick="shareContactWA(${index})" class="text-green-600 hover:text-green-800 font-bold text-xs sm:text-sm px-3 py-2 hover:bg-green-100 rounded transition flex items-center flex-1 justify-center">
+                            <i class="fab fa-whatsapp mr-1 text-lg"></i> Compartir
+                        </button>
+                        <button onclick="downloadContactPNG(${index})" class="text-purple-600 hover:text-purple-800 font-bold text-xs sm:text-sm px-3 py-2 hover:bg-purple-100 rounded transition flex items-center flex-1 justify-center">
+                            <i class="fas fa-image mr-1 text-lg"></i> PNG
+                        </button>
+                    </div>
+                    
+                    <div class="flex gap-2 w-full sm:w-auto justify-center sm:justify-end">
+                        <button onclick="loadContactForEdit(${index})" class="text-emerald-500 hover:text-emerald-700 px-3 py-2 hover:bg-emerald-100 rounded transition flex-1 justify-center" title="Editar">
+                            <i class="fas fa-edit text-lg"></i>
+                        </button>
+                        <button id="btn-del-contact-${index}" onclick="deleteContactStep(${index}, 0)" class="text-red-400 hover:text-red-700 px-3 py-2 hover:bg-red-100 rounded transition flex-1 justify-center" title="Eliminar">
+                            <i class="fas fa-trash-alt text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('contactDetailsModal').classList.remove('hidden');
+        }
+
+        function closeContactModal() {
+            document.getElementById('contactDetailsModal').classList.add('hidden');
+        }
+
+        function loadContactForEdit(index) {
+            closeContactModal(); // Cierra el modal antes de editar
+            const c = contacts[index];
+            document.getElementById('contactEditIndex').value = index;
+            document.getElementById('contactFormTitle').innerText = "Editar Contacto";
+
+            document.getElementById('contactoNombre').value = c.nombre;
+            document.getElementById('contactoApellido1').value = c.apellido1;
+            document.getElementById('contactoApellido2').value = c.apellido2 || '';
+            document.getElementById('contactoCedula').value = c.cedula || '';
+            document.getElementById('contactoPasaporte').value = c.pasaporte || '';
+            document.getElementById('contactoMovil').value = c.movil;
+            document.getElementById('contactoNacimiento').value = c.nacimiento || '';
+            document.getElementById('contactoSangre').value = c.sangre;
+            document.getElementById('contactoEmergenciaNombre').value = c.emergenciaNombre;
+            document.getElementById('contactoEmergenciaTel').value = c.emergenciaTel;
+            
+            calculateAge();
+
+            const form = document.getElementById('contactFormContainer');
+            form.classList.remove('hidden');
+            form.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        let deleteContactTimers = {};
+        function deleteContactStep(index, step) {
+            const btn = document.getElementById(`btn-del-contact-${index}`);
+            if (deleteContactTimers[index]) clearTimeout(deleteContactTimers[index]);
+
+            if (step === 0) {
+                btn.innerHTML = '<i class="fas fa-exclamation-triangle text-orange-500"></i>';
+                btn.onclick = () => deleteContactStep(index, 1);
+                deleteContactTimers[index] = setTimeout(() => resetContactDeleteBtn(index), 3000);
+            } 
+            else if (step === 1) {
+                btn.innerHTML = '<strong class="text-red-600 text-sm">CONFIRMAR</strong>';
+                btn.onclick = () => deleteContactStep(index, 2);
+                deleteContactTimers[index] = setTimeout(() => resetContactDeleteBtn(index), 3000);
+            } 
+            else if (step === 2) {
+                contacts.splice(index, 1);
+                saveData();
+                filterContacts(); // Refresca la lista
+                closeContactModal(); // Cierra el modal
+                showToast('Contacto eliminado');
+            }
+        }
+
+        function resetContactDeleteBtn(index) {
+            const btn = document.getElementById(`btn-del-contact-${index}`);
+            if(btn) {
+                btn.innerHTML = '<i class="fas fa-trash-alt text-lg"></i>';
+                btn.onclick = () => deleteContactStep(index, 0);
+            }
+        }
+
+        function shareContactWA(index) {
+            const c = contacts[index];
+            let text = `*FICHA DE EMERGENCIA - LA TRIBU*\n\n`;
+            text += `👤 *NOMBRE:* ${c.nombre} ${c.apellido1} ${c.apellido2}\n`;
+            if (c.cedula) text += `🪪 *CÉDULA:* ${c.cedula}\n`;
+            if (c.pasaporte) text += `🛂 *PASAPORTE:* ${c.pasaporte}\n`;
+            text += `📱 *MÓVIL:* ${c.movil}\n`;
+            if (c.nacimiento) text += `🎂 *NACIMIENTO:* ${new Date(c.nacimiento).toLocaleDateString()} (${c.edadStr})\n`;
+            text += `🩸 *TIPO DE SANGRE:* ${c.sangre}\n\n`;
+            text += `🚨 *EN CASO DE EMERGENCIA LLAMAR A:*\n`;
+            text += `📞 ${c.emergenciaNombre}\n`;
+            text += `☎️ ${c.emergenciaTel}`;
+
+            const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        }
+
+        function downloadContactPNG(index) {
+            const cardUI = document.getElementById(`contact-card-png-${index}`);
+            
+            showToast('Generando ficha médica...');
+            html2canvas(cardUI, { scale: 3, backgroundColor: '#ffffff' }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Ficha_Medica_${contacts[index].nombre.replace(/\s+/g, '_')}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                showToast('Ficha guardada correctamente.');
+            }).catch(err => {
+                console.error("Error generando PNG de contacto", err);
+                showToast('Hubo un error al generar la imagen.');
+            });
+        }
+
+
+        // ==========================================
+        // FUNCIONES MODALES DE PAGOS RESTANTES
+        // ==========================================
+        function closeGlobalPaymentModal() { document.getElementById('globalPaymentModal').classList.add('hidden'); }
+        function openGlobalPaymentModal() { 
+            document.getElementById('globalPaymentModal').classList.remove('hidden'); 
+            updateGlobalPaymentPreview(); 
+        }
+        function updateGlobalPaymentPreview() {
+            const sinpe = document.getElementById('globalSinpeSelect').value;
+            const cuenta = document.getElementById('globalCuentaSelect').value;
+
+            const sinpeBox = document.getElementById('globalPayCardSinpeBox');
+            if (sinpe) {
+                sinpeBox.classList.remove('hidden');
+                document.getElementById('globalPayCardSinpe').innerText = sinpe;
+            } else { sinpeBox.classList.add('hidden'); }
+
+            const cuentaBox = document.getElementById('globalPayCardCuentaBox');
+            if (cuenta) {
+                cuentaBox.classList.remove('hidden');
+                document.getElementById('globalPayCardCuenta').innerText = cuenta;
+            } else { cuentaBox.classList.add('hidden'); }
+        }
+
+        function shareGlobalPaymentWA() {
+            const sinpe = document.getElementById('globalSinpeSelect').value;
+            const cuenta = document.getElementById('globalCuentaSelect').value;
+            let text = `*INSTRUCCIONES*\n⚠️ No revele la hora ni lugar de Salida por nuestra seguridad\n\n`;
+            text += `*MÉTODOS DE PAGO OFICIALES*\n\n`;
+            if (sinpe) text += `📱 *SINPE MÓVIL:*\n${sinpe}\n\n`;
+            if (cuenta) text += `🏦 *TRANSFERENCIA BANCARIA:*\n${cuenta}\n\n`;
+            text += `_Por favor enviar el comprobante de pago por acá._`;
+            const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        }
+
+        function downloadGlobalPaymentPNG() {
+            downloadPaymentPNG('Generales', 'globalPaymentCardElement', 'btnDownloadGlobalPayPNG');
+        }
+
+        function downloadPaymentPNG(nombreArchivo, cardElementId, btnElementId) {
+            const card = document.getElementById(cardElementId);
+            const btn = document.getElementById(btnElementId);
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Procesando...';
+            btn.disabled = true;
+
+            html2canvas(card, { scale: 3, backgroundColor: null }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Pagos_${nombreArchivo.replace(/\s+/g, '_')}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                showToast('Imagen guardada correctamente.');
+            }).catch(err => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                showToast('Hubo un error al generar la imagen.');
+            });
+        }
+    </script>
+</body>
+</html>

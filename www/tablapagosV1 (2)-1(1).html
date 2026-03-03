@@ -1,0 +1,2699 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Pagos JyK</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <meta name="description" content="Aplicación para la gestión de pagos de caminatas nacionales.">
+    <meta name="theme-color" content="#d7ccc8">
+    <link rel="icon" href="https://placehold.co/180x180/8d6e63/ffffff?text=JyK" type="image/png">
+
+    <!-- Estilos CSS Integrados -->
+    <style>
+        /* -------------------
+         * Variables y Reseteo General
+         * ------------------- */
+        :root {
+            /* Colores base: Modo Sepia por defecto */
+            --color-primario: #8d6e63; 
+            --color-secundario: #d7ccc8; 
+            --color-fondo: #fbf5ef; 
+            --color-texto: #5d4037; 
+            --color-acento: #ffcc80; 
+            --color-exito: #81c784;
+            --color-error: #e57373;
+            --color-blanco: #efebe9;
+            --sombra-suave: 0 4px 8px rgba(0, 0, 0, 0.1);
+            --borde-radio: 12px;
+        }
+
+        /* --- Paleta de Temas --- */
+        .theme-sepia { --color-primario: #8d6e63; --color-secundario: #d7ccc8; --color-fondo: #fbf5ef; --color-texto: #5d4037; --color-acento: #ffcc80; --color-blanco: #efebe9; --color-exito: #81c784; --color-error: #e57373; }
+        .theme-dark { --color-primario: #90caf9; --color-secundario: #333333; --color-fondo: #121212; --color-texto: #e0e0e0; --color-acento: #ffab40; --color-blanco: #1e1e1e; --color-exito: #81c784; --color-error: #e57373; }
+
+        /* Placeholders Modo Dark */
+        .theme-dark input::placeholder,
+        .theme-dark textarea::placeholder {
+            color: #b0bec5;
+            opacity: 1;
+        }
+
+        /* Reseteo y Estilos Base */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif; }
+        body { background-color: var(--color-fondo); color: var(--color-texto); transition: background-color 0.3s, color 0.3s; line-height: 1.6; }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+
+        /* -------------------
+         * Contenedores y Layout
+         * ------------------- */
+        .container{max-width:1200px;margin:20px auto;padding:20px}
+        .content-section{background-color:var(--color-blanco);padding:1.5rem;border-radius:var(--borde-radio);margin-bottom:1.5rem}
+        .section-header{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid var(--color-secundario);padding-bottom:1rem;margin-bottom:1rem;flex-wrap:wrap; gap: 10px;}
+        .section-title { color: var(--color-primario); margin: 0; }
+        
+        .item-card{border:1px solid var(--color-secundario);border-radius:var(--borde-radio);padding:1rem;padding-top:50px;margin-top:1rem;display:grid;grid-template-columns:1fr;gap:1rem;position:relative}
+        .card-top-row{display:grid;gap:1rem;grid-template-columns:1fr}
+        @media (min-width: 768px) { .card-top-row { grid-template-columns: repeat(4, 1fr); } }
+        
+        .price-details-container{display:flex;flex-direction:column;gap:1rem}
+        @media (min-width: 768px) { .price-details-container { flex-direction: row; align-items: center; } }
+
+        .total-display{display:flex;justify-content:space-between;align-items:center;font-weight:bold;color:var(--color-exito);margin-bottom:1rem}
+        .grupal-total-formula { font-weight: bold; color: var(--color-acento); }
+        @media (min-width: 768px) { .total-display, .grupal-total-formula { padding-bottom: 0.8rem; } }
+
+        /* -------------------
+         * Formularios y Botones
+         * ------------------- */
+        .form-group{margin-bottom:1.5rem;position:relative}.form-group label{display:block;margin-bottom:.5rem;font-weight:600}.form-group input,.form-group select,.form-group textarea{width:100%;padding:.8rem;border:1px solid var(--color-secundario);border-radius:8px;background-color:var(--color-fondo);color:var(--color-texto);transition:border-color .3s}.form-group textarea{resize:vertical;min-height:80px}.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--color-acento)}
+        
+        .btn{padding:.8rem 1.2rem;border-radius:8px;border:none;cursor:pointer;font-weight:600;margin-top:.5rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;}
+        .btn-primary{background-color:var(--color-primario);color:var(--color-blanco)}
+        .btn-secondary{background-color:var(--color-secundario);color:var(--color-texto)}
+        .btn-acento{background-color:var(--color-acento);color:var(--color-texto)}
+        .btn-exito{background-color:var(--color-exito);color:var(--color-blanco)}
+        .btn-error{background-color:var(--color-error);color:var(--color-blanco)}
+        .btn-success{background-color:#25D366;color:var(--color-blanco)}
+        .btn-info{background-color:#0288d1;color:var(--color-blanco)}
+        
+        .btn-add-item{background-color:var(--color-exito);color:var(--color-blanco);border:none;width:40px;height:40px;border-radius:50%;font-size:24px;cursor:pointer;flex-shrink:0;transition:background-color .3s,transform .2s}
+        .btn-add-item:hover { background-color: #82c98d; transform: scale(1.1); }
+        .btn-delete-item{position:absolute;top:10px;right:10px;background-color:var(--color-error);color:white;border:none;border-radius:50%;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background-color .2s,transform .2s}
+        .btn-delete-item:hover { background-color: #d32f2f; transform: scale(1.1); }
+        .btn-delete-item svg { fill: white; width: 18px; height: 18px; }
+        .btn-delete-field{position:absolute;top:0;right:0;background:none;border:none;cursor:pointer;padding:5px;opacity:.6;transition:opacity .2s}
+        .btn-delete-field:hover { opacity: 1; }
+        .btn-delete-field svg { width: 16px; height: 16px; fill: var(--color-error); }
+        .btn-collapse-item{position:absolute;top:8px;left:10px;background-color:var(--color-secundario);color:var(--color-texto);border:none;border-radius:8px;width:auto;padding:6px 10px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background-color .2s,transform .2s;font-size:.8rem}
+        .btn-collapse-item:hover { background-color: var(--color-primario); transform: scale(1.05); }
+
+        /* -------------------
+         * Pestañas y Navegación
+         * ------------------- */
+        .tabs{display:flex;margin-bottom:1.5rem;border-bottom:2px solid var(--color-secundario)}.tab-link{padding:1rem 1.5rem;cursor:pointer;font-weight:600;border:none;background:none;color:var(--color-texto);border-bottom:3px solid transparent}.tab-link.active{color:var(--color-acento);border-bottom-color:var(--color-acento)}.tab-content{display:none;animation:fadeIn .5s}.tab-content.active{display:block}@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+        /* -------------------
+         * Modales y UI Extras
+         * ------------------- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,.6); display: flex; justify-content: center; align-items: center; z-index: 2000; visibility: hidden; opacity: 0; transition: visibility 0s .3s, opacity .3s; padding: 2rem 1rem; box-sizing: border-box; }
+        .modal-overlay.visible { visibility: visible; opacity: 1; transition: visibility 0s, opacity .3s; }
+        .modal-content { background-color: var(--color-blanco); padding: 2rem; border-radius: var(--borde-radio); width: 90%; max-width: 500px; text-align: center; transform: scale(.9); transition: transform .3s; max-height: 100%; overflow-y: auto; }
+        .modal-overlay.visible .modal-content { transform: scale(1); }
+        .modal-content h3 { margin-bottom: 1rem; }
+        .modal-content p { margin-bottom: 1.5rem; }
+        .modal-buttons { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+        .modal-btn { padding: .7rem 1.5rem; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .btn-accept { background-color: var(--color-primario); color: var(--color-blanco); }
+        .btn-confirm { background-color: var(--color-error); color: #fff; }
+        .btn-cancel { background-color: var(--color-secundario); color: var(--color-texto); }
+        
+        #settings-btn { position: fixed; top: 20px; right: 20px; z-index: 1001; background: var(--color-blanco); border: none; border-radius: 50%; width: 48px; height: 48px; box-shadow: var(--sombra-suave); cursor: pointer; display: flex; justify-content: center; align-items: center; }
+        #settings-btn svg { width: 24px; height: 24px; fill: var(--color-texto); }
+        
+        /* Estilos para colapsar */
+        .item-card .collapsible-content { display: block; }
+        .item-card.collapsed .collapsible-content { display: none; }
+        .collapsed-summary { display: none; }
+        .item-card.collapsed .collapsed-summary { display: flex; flex-direction: column; align-items: center; padding: 0; }
+        .collapsed-summary h4 { color: var(--color-primario); font-size: 1.1rem; margin-top: 0.5rem; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 45px; }
+        .collapsed-summary .total-display { text-align: center; width: 100%; }
+        
+        #tipo-cambio-wrapper { display: none; }
+        .crc-conversion { display: none; text-align: right; color: var(--color-texto); margin-top: -0.75rem; margin-bottom: 1rem; }
+
+        /* Estilos de Eventos Guardados */
+        #eventos-search-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1rem;
+            align-items: center;
+        }
+        #search-eventos {
+            flex-grow: 1;
+            padding: 0.8rem;
+            border: 2px solid var(--color-primario);
+            border-radius: 8px;
+            background-color: var(--color-fondo);
+        }
+        #toggle-eventos-list {
+            padding: 0.8rem 1.2rem;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--color-secundario);
+            cursor: pointer;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        #eventos-guardados-wrapper {
+            display: none; /* Colapsado por defecto */
+            margin-top: 1rem;
+        }
+
+        #eventos-guardados-list { display: flex; flex-wrap: wrap; gap: 1rem; }
+        .evento-guardado-btn { background-color: var(--color-blanco); border: 1px solid var(--color-secundario); padding: 1rem; border-radius: var(--borde-radio); cursor: pointer; text-align: left; flex-grow: 1; display: flex; justify-content: space-between; align-items: center; }
+        .evento-guardado-btn:hover { border-color: var(--color-primario); background-color: var(--color-fondo); }
+        .evento-guardado-btn div { display: flex; flex-direction: column; }
+        .evento-guardado-btn strong { color: var(--color-primario); }
+        .evento-guardado-btn small { color: var(--color-exito); font-weight: bold; }
+        .btn-delete-evento{background-color:var(--color-error);color:white;border:none;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-left:1rem}
+        .btn-delete-evento:hover{background-color:#d32f2f}
+        .btn-delete-evento svg{width:14px;height:14px;fill:white}
+        .btn-tarjeta-evento{background-color:#0288d1;color:white;border:none;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-left:.5rem}
+        .btn-tarjeta-evento:hover{background-color:#01579b}
+        .btn-tarjeta-evento svg{width:14px;height:14px;fill:white}
+
+        /* -------------------
+         * Botones Flotantes (FAB)
+         * ------------------- */
+        .fab{position:fixed;bottom:25px;width:60px;height:60px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;box-shadow:var(--sombra-suave);cursor:pointer;z-index:1000;transition:transform .2s ease-in-out,background-color .3s}.fab:hover{transform:scale(1.08)}.fab svg{width:28px;height:28px;fill:var(--color-blanco)}.fab-left{left:25px;background-color:var(--color-acento)}.fab-right{right:25px;background-color:var(--color-exito)}
+
+        /* Estilo para montos negativos */
+        .text-danger {
+            color: var(--color-error) !important;
+            font-weight: bold;
+        }
+        
+        #settings-modal .modal-content, #tab-configuracion .content-section, #report-section pre {
+            text-align: left;
+        }
+        #settings-modal h3, #settings-modal h4, #tab-configuracion h3, #tab-configuracion h4 {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .settings-section {
+            border-top: 1px solid var(--color-secundario);
+            padding-top: 1.5rem;
+            margin-top: 1.5rem;
+        }
+        #autosave-timer {
+            background-color: var(--color-fondo);
+            padding: 0.8rem;
+            border-radius: var(--borde-radio);
+            text-align: center;
+            font-weight: bold;
+            color: var(--color-primario);
+        }
+        
+        #theme-selector-grid {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .theme-swatch {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid var(--color-secundario);
+            transition: transform 0.2s;
+        }
+        .theme-swatch:hover {
+            transform: scale(1.1);
+        }
+
+        /* -------------------
+         * Estilos Reconocimientos
+         * ------------------- */
+        .provincia-group { margin-bottom: 1.5rem; }
+        .provincia-title { background-color: var(--color-secundario); color: var(--color-primario); padding: 0.5rem 1rem; border-radius: var(--borde-radio) var(--borde-radio) 0 0; margin-bottom: 0; font-weight: bold; font-size: 1.1rem; }
+        .rec-list-container { border: 1px solid var(--color-secundario); border-top: none; padding: 1rem; border-radius: 0 0 var(--borde-radio) var(--borde-radio); background-color: var(--color-fondo); }
+        .rec-card { border: 1px solid var(--color-secundario); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; background: var(--color-blanco); box-shadow: var(--sombra-suave); }
+        .rec-card:last-child { margin-bottom: 0; }
+        .rec-header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px dashed var(--color-secundario); padding-bottom: 0.5rem; margin-bottom: 0.8rem; flex-wrap: wrap; gap: 10px; }
+        .rec-title { font-size: 1.2rem; font-weight: bold; color: var(--color-primario); margin: 0; }
+        .rec-actions { display: flex; gap: 0.5rem; }
+        .rec-detail { font-size: 0.95rem; margin-bottom: 0.4rem; display: flex; justify-content: space-between; }
+        .rec-detail strong { color: var(--color-texto); opacity: 0.8; }
+        .rec-nota { font-size: 0.85rem; font-style: italic; opacity: 0.8; margin-top: 0.5rem; background: var(--color-fondo); padding: 0.5rem; border-radius: 4px; }
+
+        /* Estilos específicos para la impresión general */
+        @media print {
+            body { background-color: #ffffff; color: #000000; }
+            .container { max-width: none; margin: 0; padding: 0; }
+            .header, .tabs, .fab, .btn, .modal-overlay, .tab-content, #eventos-search-container, #rec-search-container { display: none; }
+        }
+
+        /* -------------------
+         * Responsividad
+         * ------------------- */
+        @media (max-width: 768px) {
+            body { padding-bottom: 80px; }
+            .container { margin: 10px auto; padding: 10px; }
+            .tabs { font-size: 0.9rem; flex-wrap: wrap; }
+            .tab-link { padding: 0.8rem 1rem; }
+            #settings-btn { top: 10px; right: 10px; }
+            .section-header { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+            .section-header .form-group { width: 50%; margin-top: 0.5rem; margin-bottom: 0; }
+            .section-header .btn { width: 100%; }
+            .fab { width: 50px; height: 50px; bottom: 15px; }
+            .fab-left { left: 15px; }
+            .fab-right { right: 15px; }
+            #eventos-search-container { flex-direction: column; align-items: stretch; }
+            .tarjeta-actions-container { flex-direction: column; }
+            .tarjeta-actions-container button { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container" class="container">
+        
+        <div class="tabs">
+            <button class="tab-link active" data-tab="nacionales">TABLA DE PAGOS</button>
+            <button class="tab-link" data-tab="reconocimientos">RECONOCIMIENTOS</button>
+            <button class="tab-link" data-tab="configuracion">CONFIGURACIÓN</button>
+        </div>
+        
+        <div id="tab-nacionales" class="tab-content active">
+            <div class="content-section">
+                <div class="section-header">
+                    <h3 class="section-title">Eventos Guardados</h3>
+                    <div style="display:flex; gap:10px;">
+                        <button id="nuevo-evento-btn" class="btn btn-primary">Nuevo Evento</button>
+                    </div>
+                </div>
+                <!-- Sección de Búsqueda y Lista Colapsable -->
+                <div id="eventos-search-container">
+                    <input type="text" id="search-eventos" placeholder="Buscar por nombre o precio...">
+                    <button id="toggle-eventos-list">Mostrar Lista</button>
+                </div>
+                <div id="eventos-guardados-wrapper">
+                    <div id="eventos-guardados-list"></div>
+                </div>
+                <!-- Fin Sección -->
+            </div>
+
+            <div class="content-section">
+                <div class="section-header">
+                    <h3 class="section-title">Información General del Evento</h3>
+                    <div class="form-group">
+                        <label for="currency-selector" style="display:none;">Moneda</label>
+                        <select id="currency-selector">
+                            <option value="CRC">CRC (₡)</option>
+                            <option value="USD">USD ($)</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                    <div class="form-group">
+                        <label for="evento-nombre">Nombre del Evento</label>
+                        <input type="text" id="evento-nombre">
+                    </div>
+                     <div class="form-group">
+                        <label for="evento-precio">Precio del Evento</label>
+                        <input type="number" id="evento-precio" value="0" min="0">
+                        <div id="mini-excedente-wrapper" style="font-size: 0.8rem; margin-top: 4px; font-weight: bold; color: var(--color-exito); text-align: right; transition: color 0.3s;">
+                            Excedente: <span id="mini-excedente-display">₡0</span>
+                        </div>
+                    </div>
+                     <div class="form-group">
+                        <label for="evento-capacidad-cg">Capacidad C/G</label>
+                        <input type="number" id="evento-capacidad-cg" value="0" min="0">
+                    </div>
+                     <div class="form-group">
+                        <label for="evento-capacidad-sg">Capacidad S/G</label>
+                        <input type="number" id="evento-capacidad-sg" value="0" min="0">
+                    </div>
+                    <div class="form-group" id="tipo-cambio-wrapper">
+                        <label for="tipo-cambio">Tipo de Cambio</label>
+                        <input type="number" id="tipo-cambio" value="500" min="1">
+                    </div>
+                    <div class="form-group" id="total-conversion-container">
+                        <label id="total-conversion-label">Total en USD</label>
+                        <p id="total-conversion" style="font-weight: bold; font-size: 1.2rem; color: var(--color-primario); margin-top: 8px;">$0</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="content-section">
+                <div class="section-header">
+                    <h3 class="section-title">Lista de Pagos</h3>
+                    <button class="btn-add-item" data-category="transporte-nacional">+</button>
+                </div>
+                <div id="transporte-nacional-list"></div>
+            </div>
+
+            <div class="content-section">
+                <h3 class="section-title">Totales</h3>
+                
+                <div class="total-display">
+                    <strong>TOTAL A RECOGER:</strong> 
+                    <span id="total-por-recoger">0</span>
+                </div>
+                <div class="crc-conversion" id="total-por-recoger-crc-wrapper">
+                    <small>TOTAL A RECOGER CRC: <span id="total-por-recoger-crc">0</span></small>
+                </div>
+                
+                <div class="total-display">
+                    <strong>TOTALES POR PERSONA:</strong> 
+                    <span id="grand-total-nacionales">0</span>
+                </div>
+                <div class="crc-conversion" id="grand-total-nacionales-crc-wrapper">
+                    <small>TOTAL POR PERSONA CRC: <span id="grand-total-nacionales-crc">0</span></small>
+                </div>
+
+                <div class="total-display">
+                    <strong>EXCEDENTE P.P:</strong> 
+                    <span id="diferencia-nacionales">0</span>
+                </div>
+                 <div class="crc-conversion" id="diferencia-nacionales-crc-wrapper">
+                    <small>EXCEDENTE P.P CRC: <span id="diferencia-nacionales-crc">0</span></small>
+                </div>
+
+                <div class="total-display">
+                    <strong>EXCEDENTE GENERAL:</strong> 
+                    <span id="diferencia-general-nacionales">0</span>
+                </div>
+                <div class="crc-conversion" id="diferencia-general-nacionales-crc-wrapper">
+                    <small>EXCEDENTE GENERAL CRC: <span id="diferencia-general-nacionales-crc">0</span></small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenido de Reconocimientos -->
+        <div id="tab-reconocimientos" class="tab-content">
+            <div class="content-section">
+                <div class="section-header">
+                    <h3 class="section-title">Reconocimientos de Lugares</h3>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button id="nuevo-rec-btn" class="btn btn-primary">Nuevo Registro</button>
+                        <button id="preview-rec-btn" class="btn btn-acento" style="background-color: var(--color-acento); color: var(--color-texto);">Generar Tarjeta</button>
+                        <button id="export-rec-btn" class="btn btn-secondary">Exportar JSON</button>
+                        <button onclick="document.getElementById('import-rec-input').click();" class="btn btn-secondary">Importar JSON</button>
+                        <input type="file" id="import-rec-input" accept=".json" style="display: none;">
+                    </div>
+                </div>
+
+                <!-- Formulario Integrado (Sin Modal) -->
+                <div style="background-color: var(--color-fondo); padding: 1.5rem; border-radius: var(--borde-radio); border: 1px solid var(--color-secundario); margin-bottom: 1.5rem;">
+                    <h4 id="rec-form-title" style="color: var(--color-primario); margin-bottom: 1rem;">Registrar Reconocimiento</h4>
+                    <form id="rec-form">
+                        <input type="hidden" id="rec-id">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="rec-nombre">Nombre del Lugar</label>
+                                <input type="text" id="rec-nombre" required>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="rec-provincia">Provincia</label>
+                                <select id="rec-provincia" required>
+                                    <option value="">Seleccione una provincia...</option>
+                                    <option value="San José">San José</option>
+                                    <option value="Alajuela">Alajuela</option>
+                                    <option value="Cartago">Cartago</option>
+                                    <option value="Heredia">Heredia</option>
+                                    <option value="Guanacaste">Guanacaste</option>
+                                    <option value="Puntarenas">Puntarenas</option>
+                                    <option value="Limón">Limón</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1; margin-bottom: 0;">
+                                <label for="rec-notas">Notas Adicionales</label>
+                                <textarea id="rec-notas" rows="2"></textarea>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 1rem;">
+                            <button type="submit" class="btn btn-accept">Guardar</button>
+                            <button type="button" id="rec-form-cancel-btn" class="btn btn-cancel">Limpiar Formulario</button>
+                        </div>
+                    </form>
+                </div>
+                
+                <div id="rec-search-container" style="display: flex; gap: 10px; margin-bottom: 1.5rem;">
+                    <input type="text" id="search-rec" placeholder="Buscar por lugar, provincia o nota..." style="flex-grow: 1; padding: 0.8rem; border: 2px solid var(--color-primario); border-radius: 8px; background-color: var(--color-fondo);">
+                </div>
+
+                <div id="reconocimientos-list">
+                    <!-- Contenido dinámico agrupado por provincia -->
+                </div>
+            </div>
+        </div>
+                
+        <!-- Contenido de Configuración -->
+        <div id="tab-configuracion" class="tab-content">
+            <div class="content-section">
+                <h3>CONFIGURACIÓN GENERAL</h3>
+
+                <!-- NUEVA SECCIÓN: Resumen Global -->
+                <div class="settings-section">
+                    <h4>Resumen Global (Estadísticas)</h4>
+                    <p style="text-align: center; font-size: 0.9rem; margin-bottom: 1rem; color: var(--color-texto);">Genera una imagen con el estado general de todos tus eventos y rentabilidad acumulada.</p>
+                    <div style="display: flex; justify-content: center;">
+                        <button id="generar-resumen-btn" class="btn btn-acento" style="background-color: var(--color-acento); color: var(--color-texto);">
+                            <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: currentColor; margin-right: 5px;"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg> 
+                            Generar Tarjeta de Resumen
+                        </button>
+                    </div>
+                </div>
+            
+                <div class="settings-section">
+                    <h4>Datos y Exportación</h4>
+                    <div style="display: flex; gap: 1rem; justify-content: center; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <button id="backup-btn" class="btn btn-primary">Respaldar Eventos</button>
+                        <button onclick="document.getElementById('restore-input').click();" class="btn btn-secondary">Restaurar Eventos</button>
+                        <button id="export-excel-btn" class="btn btn-success"><svg viewBox="0 0 24 24" style="width: 18px; height: 18px; fill: white;"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg> Exportar a Excel</button>
+                        <input type="file" id="restore-input" accept=".json" style="display: none;">
+                    </div>
+                    <h4>Autoguardado</h4>
+                    <p style="text-align: center;">Próximo respaldo automático en:</p>
+                    <div id="autosave-timer">Calculando...</div>
+                </div>
+
+                <div class="settings-section">
+                    <h4>Alerta de Pérdida Global</h4>
+                    <p style="text-align: center; font-size: 0.9rem; margin-bottom: 1rem; color: var(--color-texto);">
+                        Desactiva esta opción si el aviso rojo de pérdida te resulta molesto mientras estás escribiendo los precios finales.
+                    </p>
+                    <div style="display: flex; justify-content: center;">
+                        <button id="toggle-alerta-btn" class="btn btn-exito">Modo Escucha: ACTIVADO</button>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h4>Tema de la Aplicación</h4>
+                    <p style="text-align: center; font-size: 0.9rem; margin-bottom: 1rem; color: var(--color-texto);">Elige tu paleta de colores preferida:</p>
+                    <div id="theme-selector-grid"></div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Botones Flotantes -->
+    <button id="add-pago-fab" class="fab fab-left" aria-label="Agregar Nuevo Pago">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+    </button>
+    <button id="guardar-evento-btn" class="fab fab-right" aria-label="Guardar Evento">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+    </button>
+    
+    <!-- Modal de Notificación General -->
+    <div id="notification-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="notification-title">Notificación</h3>
+            <p id="notification-message"></p>
+            <div class="modal-buttons">
+                <button id="notification-accept-btn" class="modal-btn btn-accept">Aceptar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Advertencia de Pérdida -->
+    <div id="loss-warning-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="loss-warning-title" style="color: var(--color-error);">¡Advertencia!</h3>
+            <p id="loss-warning-message">Está teniendo pérdida.</p>
+            <div class="modal-buttons">
+                <button id="loss-warning-close-btn" class="modal-btn btn-cancel">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación de Borrado -->
+    <div id="delete-confirm-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="delete-confirm-title">Confirmar Borrado</h3>
+            <p id="delete-confirm-message">¿Estás seguro de que deseas borrar este elemento?</p>
+            <div class="modal-buttons">
+                <button id="delete-confirm-btn" class="modal-btn btn-confirm">Sí, borrar</button>
+                <button id="delete-cancel-btn" class="modal-btn btn-cancel">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación de Edición -->
+    <div id="edit-confirm-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="edit-confirm-title">Confirmar Edición</h3>
+            <p id="edit-confirm-message">¿Estás seguro de que deseas editar este evento? (Se reemplazará la información actual en pantalla)</p>
+            <div class="modal-buttons">
+                <button id="edit-confirm-btn" class="modal-btn btn-confirm">Sí, editar</button>
+                <button id="edit-cancel-btn" class="modal-btn btn-cancel">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Único: Tarjeta de Viaje -->
+    <div id="tarjeta-viaje-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 550px; width: 95%; text-align: left; background: var(--color-fondo);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="margin: 0; color: var(--color-primario);">Vista Previa de Tarjeta</h3>
+                <button id="tarjeta-viaje-close-btn" class="modal-btn btn-cancel" style="padding: 0.5rem 1rem;">Cerrar</button>
+            </div>
+            
+            <!-- Área de Renderizado de la Tarjeta -->
+            <div id="tarjeta-viaje-render-area" style="border-radius: 16px; overflow: hidden; margin-bottom: 1.5rem; display: flex; justify-content: center;"></div>
+            
+            <!-- Botones de Acción (Unificados) -->
+            <div class="tarjeta-actions-container" style="display: flex; gap: 0.8rem; justify-content: center; flex-wrap: wrap;">
+                <button id="tarjeta-viaje-print-btn" class="btn btn-primary">
+                    <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white;"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
+                    Imprimir
+                </button>
+                <button id="tarjeta-viaje-download-btn" class="btn btn-info">
+                    <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white;"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                    Descargar PNG
+                </button>
+                <button id="tarjeta-viaje-whatsapp-btn" class="btn btn-success">
+                    <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white;"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .1 5.395.098 11.95c0 2.094.546 4.139 1.584 5.945L0 24l6.335-1.657a11.89 11.89 0 005.711 1.46h.005c6.554 0 11.956-5.396 11.959-11.951.002-3.178-1.23-6.168-3.475-8.416z"/></svg>
+                    WhatsApp
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación de Agregado -->
+    <div id="add-confirm-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="add-confirm-title">Confirmar Nuevo Pago</h3>
+            <p id="add-confirm-message">¿Estás seguro de que deseas agregar un nuevo pago?</p>
+            <div class="modal-buttons">
+                <button id="add-confirm-btn" class="modal-btn btn-exito">Sí, agregar</button>
+                <button id="add-cancel-btn" class="modal-btn btn-cancel">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Confirmación Eliminar Reconocimiento (3 Pasos) -->
+    <div id="rec-delete-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="rec-delete-title" style="color: var(--color-error);">Paso 1: Confirmar</h3>
+            <p id="rec-delete-message" style="margin-bottom: 1.5rem;">¿Estás seguro de que deseas eliminar este reconocimiento?</p>
+            <div class="modal-buttons">
+                <button id="rec-delete-confirm-btn" class="modal-btn btn-confirm">Confirmar</button>
+                <button id="rec-delete-cancel-btn" class="modal-btn btn-cancel">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tarjeta Reconocimientos -->
+    <div id="tarjeta-rec-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 550px; width: 95%; text-align: left; background: var(--color-fondo);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="margin: 0; color: var(--color-primario);">Vista Previa Reconocimientos</h3>
+                <button id="tarjeta-rec-close-btn" class="modal-btn btn-cancel" style="padding: 0.5rem 1rem;">Cerrar</button>
+            </div>
+            <div id="tarjeta-rec-render-area" style="border-radius: 16px; overflow: hidden; margin-bottom: 1.5rem; display: flex; justify-content: center;"></div>
+            <div class="tarjeta-actions-container" style="display: flex; gap: 0.8rem; justify-content: center; flex-wrap: wrap;">
+                <button id="tarjeta-rec-download-btn" class="btn btn-info">
+                    <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white;"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                    Descargar PNG
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tarjeta Resumen Global -->
+    <div id="tarjeta-resumen-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 550px; width: 95%; text-align: left; background: var(--color-fondo);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="margin: 0; color: var(--color-primario);">Resumen Global</h3>
+                <button id="tarjeta-resumen-close-btn" class="modal-btn btn-cancel" style="padding: 0.5rem 1rem;">Cerrar</button>
+            </div>
+            <div id="tarjeta-resumen-render-area" style="border-radius: 16px; overflow: hidden; margin-bottom: 1.5rem; display: flex; justify-content: center;"></div>
+            <div class="tarjeta-actions-container" style="display: flex; gap: 0.8rem; justify-content: center; flex-wrap: wrap;">
+                <button id="tarjeta-resumen-download-btn" class="btn btn-info">
+                    <svg viewBox="0 0 24 24" style="width: 20px; height: 20px; fill: white;"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                    Descargar PNG
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lógica de la Aplicación -->
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        // CONSTANTES Y CONFIGURACIÓN
+        const DB_NAME = 'PagosAppDB';
+        const DB_VERSION = 3;
+        let db;
+        let currentCurrency = 'CRC';
+        let currentEventId = null;
+        let eventToLoadId = null;
+        const AUTOSAVE_INTERVAL=4*24*60*60*1000;
+        let allEventsCache = []; // Almacenar eventos en memoria para búsqueda rápida
+
+        // Variable global para la Tarjeta de Viaje (WhatsApp format)
+        let currentWhatsAppText = '';
+
+        // Variable global para controlar la alerta de pérdida
+        let alertaPerdidaHabilitada = localStorage.getItem('alertaPerdida') !== 'false';
+
+        const airlinesData = {
+            "Arajet": "hablemos@arajet.com", "AeroMexico": "Call Center: 2440-1354 / 2440-1378, Web: www.aeromexico.com", "Air Canada": "Call Center: 0800-032-0066, Web: www.aircanada.com", "Air Transat": "Web: http://www.airtransat.com", "AirFrance": "Call Center: 2539-7413, Web: www.airfrance.cr", "Alaska": "Call Center: 1-800-252-7522, Web: www. alaskaair.com", "American Airlines": "Call Center: 2420-1217, Web: www.aa.com", "Avianca": "Call Center: 4002-3320, Web: www. avianca.com", "British Airlines": "Call Center: 2441-2537, Web: www.britishairways.com", "Costa Rica Green Airways": "Call Center: 4070-0771, Web: www. costaricagreenair.com", "Copa Airlines": "Call Center: 800-044-0005, Web: www.copa.com", "Delta Airlines": "Call Center: 2257-4141, Web: www.delta.com", "Frontier": "Call Center: 2435-9262, Web: www.flyfrontier.com", "GOL": "Call Center: +55 11 3471 2973, Web: www.voegol.com.br", "Edelweiss": "Call Center: 1-877-359-7947, Web: www.flyedelweiss.com", "Iberojet": "Call Center: 6414-1180, Web: www.iberojet.com", "Iberia": "Call Center: 2036-0069, Web: www.iberia.com", "LATAM": "Call Center: 2257-5745, Web: www.latamairlines.com", "Lufthansa": "Call Center: 2442-7502, Web: www.lufthansa.com", "KLM": "Call Center: 2430-4748, Web: www.klm.com", "jetBlue": "Call Center: 0-800-012-1666, Web: www.jetblue.com", "SANSA": "Call Center: 2290-4100, Web: www.flysansa.com", "Southwest": "Call Center: 0-800-012-1917, Web: www. espanol.southwest.com", "Spirit": "Call Center: 4000-1887, Web: www.spirit.com", "United": "Call Center: 0-800-044-0005, Web: www.united.com", "Volaris": "Call Center: 4002-7462, Web: www.volaris.com", "Wingo": "Call Center: 0-571-307-8133, Web: www.wingo.com"
+        };
+
+        // SELECTORES DEL DOM
+        const tabs = document.querySelectorAll('.tab-link');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const addItemBtns = document.querySelectorAll('.btn-add-item');
+        const eventoNombre = document.getElementById('evento-nombre');
+        const eventoPrecio = document.getElementById('evento-precio');
+        const eventoCapacidadCG = document.getElementById('evento-capacidad-cg');
+        const eventoCapacidadSG = document.getElementById('evento-capacidad-sg');
+        const tipoCambioInput = document.getElementById('tipo-cambio');
+        const tipoCambioWrapper = document.getElementById('tipo-cambio-wrapper');
+        const totalConversionLabel = document.getElementById('total-conversion-label');
+        const totalConversionDisplay = document.getElementById('total-conversion');
+        const totalConversionContainer = document.getElementById('total-conversion-container');
+        const currencySelector = document.getElementById('currency-selector');
+        const deleteConfirmModal = document.getElementById('delete-confirm-modal');
+        const deleteConfirmBtn = document.getElementById('delete-confirm-btn');
+        const deleteCancelBtn = document.getElementById('delete-cancel-btn');
+        const deleteConfirmMessage = document.getElementById('delete-confirm-message');
+        const editConfirmModal = document.getElementById('edit-confirm-modal');
+        const editConfirmBtn = document.getElementById('edit-confirm-btn');
+        const editCancelBtn = document.getElementById('edit-cancel-btn');
+        const editConfirmMessage = document.getElementById('edit-confirm-message');
+        const addConfirmModal = document.getElementById('add-confirm-modal');
+        const addConfirmBtn = document.getElementById('add-confirm-btn');
+        const addCancelBtn = document.getElementById('add-cancel-btn');
+        const exportExcelBtn = document.getElementById('export-excel-btn');
+        
+        // Selectores Modal Tarjeta Viaje
+        const tarjetaViajeModal = document.getElementById('tarjeta-viaje-modal');
+        const tarjetaViajeCloseBtn = document.getElementById('tarjeta-viaje-close-btn');
+        const tarjetaViajeRenderArea = document.getElementById('tarjeta-viaje-render-area');
+        const tarjetaViajePrintBtn = document.getElementById('tarjeta-viaje-print-btn');
+        const tarjetaViajeDownloadBtn = document.getElementById('tarjeta-viaje-download-btn');
+        const tarjetaViajeWhatsappBtn = document.getElementById('tarjeta-viaje-whatsapp-btn');
+
+        const grandTotalNacionalesCrc = document.getElementById('grand-total-nacionales-crc');
+        const diferenciaNacionalesCrc = document.getElementById('diferencia-nacionales-crc');
+        const diferenciaGeneralNacionalesCrc = document.getElementById('diferencia-general-nacionales-crc');
+        const crcConversionWrappers = document.querySelectorAll('.crc-conversion');
+        const guardarEventoBtn = document.getElementById('guardar-evento-btn');
+        const nuevoEventoBtn = document.getElementById('nuevo-evento-btn');
+        const eventosGuardadosList = document.getElementById('eventos-guardados-list');
+        const lossWarningModal = document.getElementById('loss-warning-modal');
+        const lossWarningCloseBtn = document.getElementById('loss-warning-close-btn');
+        const backupBtn = document.getElementById('backup-btn');
+        const autosaveTimerDisplay = document.getElementById('autosave-timer');
+        const addPagoFab = document.getElementById('add-pago-fab');
+        const toggleAlertaBtn = document.getElementById('toggle-alerta-btn');
+        
+        // Selectores de Búsqueda
+        const searchInput = document.getElementById('search-eventos');
+        const toggleEventosListBtn = document.getElementById('toggle-eventos-list');
+        const eventosGuardadosWrapper = document.getElementById('eventos-guardados-wrapper');
+
+        // Lógica del botón de Alerta de Pérdida Global y Locales
+        function updateAlertaBtnUI() {
+            if (alertaPerdidaHabilitada) {
+                toggleAlertaBtn.textContent = 'Modo Escucha: ACTIVADO';
+                toggleAlertaBtn.className = 'btn btn-exito';
+                document.querySelectorAll('.local-alert-container').forEach(el => el.style.display = 'none');
+            } else {
+                toggleAlertaBtn.textContent = 'Modo Escucha: DESACTIVADO';
+                toggleAlertaBtn.className = 'btn btn-secondary';
+                document.querySelectorAll('.local-alert-container').forEach(el => el.style.display = 'block');
+            }
+        }
+        
+        if (toggleAlertaBtn) {
+            toggleAlertaBtn.addEventListener('click', () => {
+                alertaPerdidaHabilitada = !alertaPerdidaHabilitada;
+                localStorage.setItem('alertaPerdida', alertaPerdidaHabilitada);
+                updateAlertaBtnUI();
+            });
+            updateAlertaBtnUI(); // Configuración inicial
+        }
+
+        // CONFIGURACIÓN DE INDEXEDDB
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onerror = (event) => { console.error('Error al abrir IndexedDB:', event.target.error); reject('Error de base de datos'); };
+                request.onsuccess = (event) => { 
+                    db = event.target.result;
+                    console.log('Base de datos abierta exitosamente.'); 
+                    resolve(); 
+                };
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains('eventos')) { 
+                        db.createObjectStore('eventos', { keyPath: 'id', autoIncrement: true }); 
+                    }
+                    if (!db.objectStoreNames.contains('reconocimientos')) { 
+                        db.createObjectStore('reconocimientos', { keyPath: 'id', autoIncrement: true }); 
+                    }
+                };
+            });
+        }
+
+        // MANEJO DE FORMULARIOS Y UI
+        document.body.addEventListener('keydown', (e) => {
+            const isNumericField = e.target.type === 'number' || e.target.classList.contains('item-price-per-person') || e.target.classList.contains('item-price-grupal') || e.target.classList.contains('item-quantity') || e.target.classList.contains('airline-price') || e.target.id === 'evento-precio' || e.target.id === 'evento-capacidad-cg' || e.target.id === 'evento-capacidad-sg' || e.target.id === 'tipo-cambio' || e.target.id.startsWith('monto-');
+            
+            if (isNumericField) {
+                if (!/[0-9]/.test(e.key) && e.key !== '.' && e.key !== 'Backspace' && e.key !== 'Delete' && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') {
+                    if (!(e.ctrlKey || e.metaKey) || (e.key !== 'a' && e.key !== 'c' && e.key !== 'v' && e.key !== 'x')) {
+                        e.preventDefault();
+                    }
+                }
+            }
+        });
+
+        document.body.addEventListener('input', (e) => {
+            if (e.target.type === 'number' || e.target.classList.contains('item-price-per-person') || e.target.classList.contains('item-price-grupal') || e.target.classList.contains('item-quantity') || e.target.classList.contains('airline-price') || e.target.id === 'evento-precio' || e.target.id === 'evento-capacidad-cg' || e.target.id === 'evento-capacidad-sg' || e.target.id === 'tipo-cambio' || e.target.id.startsWith('monto-')) {
+                let value = e.target.value.replace(/[^0-9.]/g, ''); 
+                if (value.length > 1 && value.startsWith('0') && !value.startsWith('0.')) {
+                    value = parseFloat(value);
+                }
+                e.target.value = value;
+            }
+            if (e.target === eventoNombre || e.target.classList.contains('item-nombre')) {
+                e.target.value = e.target.value.toUpperCase();
+            }
+
+            if (e.target.matches('.phone-input')) {
+                e.target.value = e.target.value.replace(/[^0-9]/g, '');
+            }
+        });
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(item => item.classList.remove('active'));
+                tab.classList.add('active');
+                const targetTab = document.getElementById(`tab-${tab.dataset.tab}`);
+                if(targetTab) targetTab.classList.add('active');
+                tabContents.forEach(content => content.classList.remove('active'));
+                if(targetTab) targetTab.classList.add('active');
+            });
+        });
+        
+        function updateFieldSelectorsForCurrency() {
+            const allFieldSelectors = document.querySelectorAll('.field-selector');
+            allFieldSelectors.forEach(selector => {
+                const airlineOption = selector.querySelector('option[value="aerolinea"]');
+                const card = selector.closest('.item-card');
+                if (currentCurrency === 'USD') {
+                    if (!airlineOption) {
+                        const option = document.createElement('option');
+                        option.value = 'aerolinea';
+                        option.textContent = 'Aerolínea';
+                        selector.options[0].insertAdjacentElement('afterend', option);
+                    }
+                } else { 
+                    if (airlineOption) {
+                        airlineOption.remove();
+                    }
+                    const airlineField = card.querySelector('[data-field-name="aerolinea"]');
+                    if (airlineField) {
+                        airlineField.remove();
+                        togglePriceVisibility(card);
+                    }
+                }
+            });
+        }
+        
+        currencySelector.addEventListener('change', (e) => {
+            currentCurrency = e.target.value;
+            tipoCambioWrapper.style.display = (currentCurrency === 'USD') ? 'block' : 'none';
+            totalConversionContainer.style.display = (currentCurrency === 'USD') ? 'block' : 'none';
+            totalConversionLabel.textContent = (currentCurrency === 'USD') ? 'Total en CRC' : 'Total en USD';
+            
+            updateFieldSelectorsForCurrency();
+            updateAllTotals();
+        });
+
+        function togglePriceVisibility(card) {
+            if (!card) return;
+            const airlineField = card.querySelector('[data-field-name="aerolinea"]');
+            const pricePerPersonInput = card.querySelector('.item-price-per-person');
+            if (pricePerPersonInput) {
+                const priceGroup = pricePerPersonInput.closest('.form-group');
+                if (priceGroup) {
+                    priceGroup.style.display = airlineField ? 'none' : 'block';
+                }
+            }
+        }
+
+        // LÓGICA PARA AÑADIR Y ELIMINAR ITEMS Y PRECIOS DINÁMICOS
+        function addNewPagoItem() {
+            openAddModal(() => {
+                const category = 'transporte-nacional';
+                const listContainer = document.getElementById(`${category}-list`);
+                if (listContainer) {
+                    const lastItem = listContainer.lastElementChild;
+                    if (lastItem) {
+                        const nombreInput = lastItem.querySelector('input[required]');
+                        if (nombreInput && nombreInput.value.trim() === '') {
+                            showNotification('Por favor, completa el campo "Nombre" del último pago antes de agregar uno nuevo.');
+                            return;
+                        }
+                    }
+
+                    const itemsToCollapse = listContainer.querySelectorAll('.item-card');
+                    itemsToCollapse.forEach(card => {
+                        if (!card.classList.contains('collapsed')) {
+                            card.classList.add('collapsed');
+                            const collapseBtn = card.querySelector('.btn-collapse-item');
+                            if (collapseBtn) collapseBtn.textContent = 'Mostrar';
+                        }
+                    });
+
+                    const newItemWrapper = document.createElement('div');
+                    newItemWrapper.innerHTML = createItemHTML();
+                    const newItem = newItemWrapper.firstElementChild;
+                    listContainer.appendChild(newItem);
+                    calculateGrandTotal(category);
+                    newItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+        }
+
+        addItemBtns.forEach(btn => {
+            btn.addEventListener('click', addNewPagoItem);
+        });
+
+        if (addPagoFab) {
+            addPagoFab.addEventListener('click', addNewPagoItem);
+        }
+
+        document.body.addEventListener('click', (e) => {
+            const collapseBtn = e.target.closest('.btn-collapse-item');
+            const deleteFieldBtn = e.target.closest('.btn-delete-field');
+            const exportPagoBtn = e.target.closest('.export-pago-btn');
+
+            if (collapseBtn) {
+                const card = collapseBtn.closest('.item-card');
+                if (card) {
+                    card.classList.toggle('collapsed');
+                    const isCollapsed = card.classList.contains('collapsed');
+                    collapseBtn.textContent = isCollapsed ? 'Mostrar' : 'Ocultar';
+                    if (isCollapsed) {
+                        updateTotals(card.querySelector('input')); 
+                    }
+                }
+            }
+            if (deleteFieldBtn) {
+                const formGroup = deleteFieldBtn.closest('.form-group');
+                if (formGroup) {
+                    const fieldName = formGroup.dataset.fieldName;
+                    const itemCard = formGroup.closest('.item-card');
+                    if (itemCard) {
+                        if (fieldName) {
+                            const selector = itemCard.querySelector('.field-selector');
+                            const option = selector.querySelector(`option[value="${fieldName}"]`);
+                            if (option) option.disabled = false;
+                        }
+                        formGroup.remove();
+                        if (fieldName === 'aerolinea') {
+                            togglePriceVisibility(itemCard);
+                        }
+                        updateTotals(itemCard.querySelector('input')); 
+                    }
+                }
+            }
+            if (exportPagoBtn) {
+                const card = exportPagoBtn.closest('.item-card');
+                if (card) {
+                    const pagoData = getPagoDataFromCard(card);
+                    const jsonString = JSON.stringify(pagoData, null, 2);
+                    const blob = new Blob([jsonString], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const nombrePago = (pagoData.nombre || 'pago').replace(/\s+/g, '_');
+                    a.download = `pago_${nombrePago}_${new Date().toISOString().slice(0,10)}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }
+            }
+            // Control del botón de alerta local dentro de la tarjeta
+            if (e.target.classList.contains('local-alert-btn')) {
+                const btn = e.target;
+                const isAlertOn = btn.dataset.alert === 'true';
+                if (isAlertOn) {
+                    btn.dataset.alert = 'false';
+                    btn.textContent = 'Desactivada';
+                    btn.classList.remove('btn-exito');
+                    btn.classList.add('btn-secondary');
+                } else {
+                    btn.dataset.alert = 'true';
+                    btn.textContent = 'Activada';
+                    btn.classList.remove('btn-secondary');
+                    btn.classList.add('btn-exito');
+                }
+            }
+            if (e.target.closest('.btn-delete-item')) {
+                const element = e.target.closest('.item-card');
+                openDeleteModal('¿Estás seguro de que deseas borrar este pago?', () => {
+                    const category = element.parentElement.id;
+                    element.remove();
+                    calculateGrandTotal(category);
+                });
+            }
+        });
+
+        function createItemHTML() {
+            const uniqueId = `item-${Date.now()}-${Math.random()}`;
+            let airlineOptionHTML = (currentCurrency === 'USD') ? `<option value="aerolinea">Aerolínea</option>` : '';
+            let localAlertDisplay = alertaPerdidaHabilitada ? 'none' : 'block';
+            
+            return `<div class="item-card" id="${uniqueId}"><button class="btn-collapse-item" aria-label="Colapsar pago">Ocultar</button><button class="btn-delete-item" aria-label="Eliminar pago"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></button><div class="collapsed-summary"></div><div class="collapsible-content"><div class="card-top-row"><div class="form-group"><label for="nombre-${uniqueId}">Nombre</label><input type="text" id="nombre-${uniqueId}" class="item-nombre" required></div><div class="form-group"><label for="tipo-precio-${uniqueId}">Tipo de Precio</label><select id="tipo-precio-${uniqueId}" class="price-type-selector"><option value="persona">Precio por Persona</option><option value="grupal">Precio Grupal</option></select></div><div class="form-group"><label for="field-selector-${uniqueId}">Añadir Campo</label><select id="field-selector-${uniqueId}" class="field-selector" data-card-id="${uniqueId}"><option value="">Seleccionar...</option>${airlineOptionHTML}<option value="descripcion">Descripción</option><option value="telefono">Teléfono</option><option value="whatsapp">WhatsApp</option><option value="email">Email</option><option value="fecha">Fecha</option><option value="cantidad">Cantidad</option><option value="tipo_pago">Tipo de Pago</option><option value="guias">Guías</option><option value="nombre_encargado">Nombre Encargado</option><option value="telefono_encargado">Teléfono Encargado</option><option value="nota">Nota</option><option value="impuesto">Impuesto</option></select></div><div class="form-group local-alert-container" style="display: ${localAlertDisplay};"><label>Alerta Individual</label><button type="button" class="btn local-alert-btn btn-secondary" data-alert="false" style="width: 100%; margin-top: 0; padding: 0.8rem 0;">Desactivada</button></div></div><div class="dynamic-fields-container" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem"></div><div class="price-section" style="border-top:1px solid var(--color-secundario);margin-top:1rem;padding-top:1rem"><div class="price-details-container"><div class="form-group"><label for="precio-persona-${uniqueId}">Precio p/p</label><input type="number" id="precio-persona-${uniqueId}" class="item-price-per-person" min="0" value="0"></div><div class="total-display"><strong>TOTAL:</strong> <span class="total-amount">0</span></div></div></div><button class="btn btn-secondary export-pago-btn" style="margin-top:1rem;width:100%">Exportar Pago (JSON)</button></div></div>`;
+        }
+        
+        // Función para crear un elemento de campo de forma programática
+        function createFieldElement(fieldName, cardId) {
+            const fieldId = `${fieldName}-${cardId}`;
+            const formGroup = document.createElement('div');
+            formGroup.className = 'form-group';
+            formGroup.dataset.fieldName = fieldName;
+            const deleteButton = `<button type="button" class="btn-delete-field" aria-label="Eliminar campo"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>`;
+
+            let labelText = '';
+            let inputElement;
+
+            switch (fieldName) {
+                case 'aerolinea':
+                    formGroup.style.gridColumn = '1 / -1';
+                    const airlineSelect = document.createElement('select');
+                    airlineSelect.id = `${fieldId}-selector`;
+                    airlineSelect.className = 'airline-selector';
+                    const defaultOption = document.createElement('option');
+                    defaultOption.value = '';
+                    defaultOption.textContent = 'Seleccione una aerolínea...';
+                    airlineSelect.appendChild(defaultOption);
+                    Object.keys(airlinesData).forEach(name => {
+                        const option = document.createElement('option');
+                        option.value = name;
+                        option.textContent = name;
+                        airlineSelect.appendChild(option);
+                    });
+                    const infoDisplay = document.createElement('p');
+                    infoDisplay.id = `${fieldId}-info`;
+                    infoDisplay.className = 'airline-info-display';
+                    infoDisplay.style.cssText = 'margin-top: 0.5rem; background-color: var(--color-secundario); padding: 0.8rem; border-radius: 8px; min-height: 40px; color: var(--color-texto); font-size: 0.9rem;';
+
+                    const airlineFieldsContainer = document.createElement('div');
+                    airlineFieldsContainer.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem;';
+                    
+                    const fields = ['boleto-ida', 'boleto-vuelta', 'precio-asiento', 'equipaje-basico', 'equipaje-medio', 'equipaje-full', 'precio-opcional'];
+                    fields.forEach(f => {
+                        const subGroup = document.createElement('div');
+                        subGroup.className = 'form-group';
+                        const subLabel = document.createElement('label');
+                        subLabel.setAttribute('for', `${fieldId}-${f}`);
+                        subLabel.textContent = f.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                        const subInput = document.createElement('input');
+                        subInput.type = 'number';
+                        subInput.id = `${fieldId}-${f}`;
+                        subInput.className = 'airline-price';
+                        subInput.value = '0';
+                        subInput.min = '0';
+                        subGroup.append(subLabel, subInput);
+                        airlineFieldsContainer.appendChild(subGroup);
+                    });
+
+                    formGroup.innerHTML = `<label for="${fieldId}-selector">Aerolínea</label>`;
+                    formGroup.appendChild(airlineSelect);
+                    formGroup.innerHTML += deleteButton;
+                    formGroup.appendChild(infoDisplay);
+                    formGroup.appendChild(airlineFieldsContainer);
+
+                    airlineSelect.addEventListener('change', (e) => {
+                        const selectedAirline = e.target.value;
+                        infoDisplay.textContent = airlinesData[selectedAirline] || '';
+                        updateTotals(e.target);
+                    });
+                    return formGroup;
+
+                case 'descripcion': labelText = 'Descripción'; inputElement = document.createElement('input'); inputElement.type = 'text'; break;
+                case 'telefono': labelText = 'Teléfono'; inputElement = document.createElement('input'); inputElement.type = 'tel'; inputElement.maxLength = 8; inputElement.className = 'phone-input'; break;
+                case 'whatsapp': labelText = 'WhatsApp'; inputElement = document.createElement('input'); inputElement.type = 'tel'; inputElement.maxLength = 8; inputElement.className = 'phone-input'; break;
+                case 'email': labelText = 'Email'; inputElement = document.createElement('input'); inputElement.type = 'email'; break;
+                case 'fecha': labelText = 'Fecha'; inputElement = document.createElement('input'); inputElement.type = 'date'; break;
+                case 'cantidad': labelText = 'Cantidad'; inputElement = document.createElement('input'); inputElement.type = 'number'; inputElement.value = '1'; inputElement.min = '1'; inputElement.className = 'item-quantity'; break;
+                case 'tipo_pago':
+                    labelText = 'Tipo de Pago';
+                    inputElement = document.createElement('select');
+                    ['Efectivo', 'SINPE', 'Transferencia'].forEach(op => {
+                        const option = document.createElement('option');
+                        option.value = op.toLowerCase();
+                        option.textContent = op;
+                        inputElement.appendChild(option);
+                    });
+                    break;
+                case 'guias': labelText = 'Guías'; inputElement = document.createElement('input'); inputElement.type = 'text'; break;
+                case 'nombre_encargado': labelText = 'Nombre Encargado'; inputElement = document.createElement('input'); inputElement.type = 'text'; break;
+                case 'telefono_encargado': labelText = 'Teléfono Encargado'; inputElement = document.createElement('input'); inputElement.type = 'tel'; inputElement.maxLength = 8; inputElement.className = 'phone-input'; break;
+                case 'nota': labelText = 'Nota'; inputElement = document.createElement('textarea'); inputElement.rows = 3; break;
+                case 'impuesto':
+                    labelText = 'Impuesto';
+                    inputElement = document.createElement('select');
+                    ['No', 'Sí'].forEach(op => {
+                        const option = document.createElement('option');
+                        option.value = op.toLowerCase();
+                        option.textContent = op;
+                        inputElement.appendChild(option);
+                    });
+                    inputElement.className = 'impuesto-selector';
+                    
+                    const montoContainer = document.createElement('div');
+                    montoContainer.className = 'form-group monto-impuesto-container';
+                    montoContainer.style.cssText = 'display: none; margin-top: 1rem; margin-bottom: 0;';
+                    const montoLabel = document.createElement('label');
+                    montoLabel.setAttribute('for', `monto-${fieldId}`);
+                    montoLabel.textContent = 'Monto Impuesto';
+                    const montoInput = document.createElement('input');
+                    montoInput.type = 'number';
+                    montoInput.id = `monto-${fieldId}`;
+                    montoInput.min = '0';
+                    montoInput.value = '0';
+                    montoContainer.append(montoLabel, montoInput);
+
+                    formGroup.appendChild(document.createElement('label')).textContent = labelText;
+                    formGroup.appendChild(inputElement);
+                    formGroup.innerHTML += deleteButton; 
+                    formGroup.appendChild(montoContainer);
+
+                    inputElement.addEventListener('change', () => {
+                        montoContainer.style.display = inputElement.value === 'si' ? 'block' : 'none';
+                        updateTotals(inputElement);
+                    });
+                    return formGroup;
+                default:
+                    return null;
+            }
+
+            const label = document.createElement('label');
+            label.setAttribute('for', fieldId);
+            label.textContent = labelText;
+            inputElement.id = fieldId;
+            formGroup.append(label, inputElement);
+            formGroup.innerHTML += deleteButton;
+
+            return formGroup;
+        }
+
+
+        document.body.addEventListener('change', (e) => {
+            const fieldSelector = e.target.matches('.field-selector');
+            const impuestoSelector = e.target.matches('.impuesto-selector');
+            const priceTypeSelector = e.target.matches('.price-type-selector');
+            const airlineSelector = e.target.matches('.airline-selector');
+
+            if (fieldSelector) {
+                const select = e.target;
+                const fieldName = select.value;
+                const cardId = select.dataset.cardId;
+                if (!fieldName || !cardId) return;
+                const card = document.getElementById(cardId);
+                if (card) {
+                    const container = card.querySelector('.dynamic-fields-container');
+                    const newFieldElement = createFieldElement(fieldName, cardId);
+                    if (newFieldElement) {
+                        container.appendChild(newFieldElement);
+                        const optionToDisable = select.querySelector(`option[value="${fieldName}"]`);
+                        if (optionToDisable) optionToDisable.disabled = true;
+                        select.value = '';
+                        if (fieldName === 'aerolinea') {
+                            togglePriceVisibility(card);
+                        }
+                        updateTotals(card.querySelector('input'));
+                    }
+                }
+            }
+            if (impuestoSelector) {
+                const montoContainer = e.target.closest('.form-group').querySelector('.monto-impuesto-container');
+                if (montoContainer) montoContainer.style.display = e.target.value === 'si' ? 'block' : 'none';
+            }
+            if (priceTypeSelector) {
+                updatePriceFields(e.target);
+            }
+            if (airlineSelector) {
+                const selectedAirline = e.target.value;
+                const infoDisplay = e.target.closest('.form-group').querySelector('.airline-info-display');
+                if (infoDisplay) {
+                    infoDisplay.textContent = airlinesData[selectedAirline] || '';
+                }
+            }
+        });
+
+        document.body.addEventListener('input', (e) => {
+            const card = e.target.closest('.item-card');
+            if (card) {
+                updateTotals(e.target);
+            } else {
+                calculateGrandTotal('transporte-nacional-list');
+            }
+        });
+        
+        const globalCalculationFields = [eventoPrecio, eventoCapacidadCG, eventoCapacidadSG, tipoCambioInput];
+        globalCalculationFields.forEach(field => {
+            if (field) field.addEventListener('input', () => {
+                updateAllTotals();
+            });
+        });
+
+        function updatePriceFields(selectElement, shouldUpdateTotals = true) {
+            const itemCard = selectElement.closest('.item-card');
+            const priceSection = itemCard.querySelector('.price-section');
+            const uniqueId = itemCard.id;
+            const currencySymbol = currentCurrency === 'CRC' ? '₡' : '$';
+            if (selectElement.value === 'persona') {
+                priceSection.innerHTML = `<div class="price-details-container"><div class="form-group"><label for="precio-persona-${uniqueId}">Precio p/p</label><input type="number" id="precio-persona-${uniqueId}" class="item-price-per-person" min="0" value="0"></div><div class="total-display"><strong>TOTAL:</strong> <span class="total-amount">${currencySymbol}0</span></div></div>`;
+            } else {
+                priceSection.innerHTML = `<div class="price-details-container"><div class="form-group"><label for="precio-grupal-${uniqueId}">Precio Grupal</label><input type="number" id="precio-grupal-${uniqueId}" class="item-price-grupal" min="0" value="0"></div><div class="grupal-total-formula"><strong>TOTAL:</strong> <span class="grupal-amount">${currencySymbol}0</span></div></div>`;
+            }
+            togglePriceVisibility(itemCard);
+            if (shouldUpdateTotals) {
+                updateTotals(selectElement);
+            }
+        }
+        
+        function calculateBaseTotal(card, type) {
+            const capacidadCG = parseFloat(eventoCapacidadCG?.value) || 0;
+            const capacidadSG = parseFloat(eventoCapacidadSG?.value) || 0;
+            const airlineField = card.querySelector('[data-field-name="aerolinea"]');
+
+            if (capacidadSG === 0) return 0;
+
+            if (airlineField) {
+                let totalAerolineaCalculado = 0;
+                card.querySelectorAll('.airline-price').forEach(input => {
+                    totalAerolineaCalculado += parseFloat(input.value) || 0;
+                });
+                return totalAerolineaCalculado * capacidadCG / capacidadSG;
+            }
+            
+            let precio = 0;
+            if (type === 'persona') {
+                precio = parseFloat(card.querySelector('.item-price-per-person')?.value) || 0;
+                return precio * capacidadCG / capacidadSG;
+            } else { // grupal
+                precio = parseFloat(card.querySelector('.item-price-grupal')?.value) || 0;
+                return precio / capacidadSG;
+            }
+        }
+
+        function formatCurrency(amount,currency=currentCurrency){const symbol=currency==='CRC'?'₡':'$';const value=Math.round(amount);return`${symbol}${value.toLocaleString('es-CR')}`;}
+
+        function updateTotals(element) {
+            const card = element.closest('.item-card');
+            if (!card) return;
+
+            togglePriceVisibility(card); 
+
+            const priceType = card.querySelector('.price-type-selector').value;
+            const baseTotal = calculateBaseTotal(card, priceType);
+            const cantidadInput = card.querySelector('.item-quantity');
+            
+            const totalDisplay = card.querySelector('.total-display, .grupal-total-formula');
+            const totalSpan = card.querySelector('.total-amount, .grupal-amount');
+            
+            let finalTotal = baseTotal;
+            let label = "TOTAL:";
+
+            if (cantidadInput) {
+                const cantidad = parseFloat(cantidadInput.value) || 1;
+                finalTotal = baseTotal * cantidad;
+                label = "TOTAL X CANTIDAD:";
+            }
+
+            if(totalDisplay && totalSpan) {
+                totalDisplay.querySelector('strong').textContent = label;
+                totalSpan.textContent = formatCurrency(finalTotal);
+            }
+            
+            const summaryContainer = card.querySelector('.collapsed-summary');
+            if (summaryContainer) {
+                const nombre = card.querySelector('.item-nombre').value || 'Sin Nombre';
+                summaryContainer.innerHTML = `<div class="total-display"><strong>${label}</strong> ${formatCurrency(finalTotal)}</div><h4>${nombre}</h4>`;
+            }
+            
+            const category = card.parentElement.id;
+            calculateGrandTotal(category, card);
+        }
+
+        function calculateGrandTotal(category, triggerCard = null) {
+            if(!category)return;
+            const list=document.getElementById(category);
+            const categoryName='nacionales';
+            const totalContainer=document.getElementById(`grand-total-${categoryName}`);
+            const diferenciaContainer=document.getElementById(`diferencia-${categoryName}`);
+            const diferenciaGeneralContainer=document.getElementById(`diferencia-general-${categoryName}`);
+            
+            const totalRecogerContainer = document.getElementById('total-por-recoger');
+            const totalRecogerCrcContainer = document.getElementById('total-por-recoger-crc');
+            const totalRecogerCrcWrapper = document.getElementById('total-por-recoger-crc-wrapper');
+
+            if (!list || !totalContainer || !diferenciaContainer || !diferenciaGeneralContainer) return;
+
+            let grandTotal = 0;
+            list.querySelectorAll('.item-card').forEach(card => {
+                const baseTotal = calculateBaseTotal(card, card.querySelector('.price-type-selector').value);
+                const cantidadInput = card.querySelector('.item-quantity');
+                grandTotal += (cantidadInput) ? (baseTotal * (parseFloat(cantidadInput.value) || 1)) : baseTotal;
+            });
+
+            const precioDelEvento = parseFloat(eventoPrecio.value) || 0;
+            const capacidadCG = parseFloat(eventoCapacidadCG.value) || 0;
+            const capacidadSG = parseFloat(eventoCapacidadSG.value) || 0; 
+            
+            const totalPorRecoger = precioDelEvento * capacidadSG;
+            const diferencia = precioDelEvento - grandTotal;
+            const diferenciaGeneral = diferencia * capacidadSG;
+
+            if (totalRecogerContainer) {
+                totalRecogerContainer.textContent = formatCurrency(totalPorRecoger);
+            }
+
+            totalContainer.textContent = formatCurrency(grandTotal);
+            diferenciaContainer.textContent = formatCurrency(diferencia);
+            diferenciaGeneralContainer.textContent = formatCurrency(diferenciaGeneral);
+
+            diferenciaContainer.classList.toggle('text-danger', diferencia < 0);
+            diferenciaGeneralContainer.classList.toggle('text-danger', diferenciaGeneral < 0);
+
+            // ---> NUEVO: Actualizar el mini excedente debajo de Precio del Evento <---
+            const miniExcedenteDisplay = document.getElementById('mini-excedente-display');
+            const miniExcedenteWrapper = document.getElementById('mini-excedente-wrapper');
+            if (miniExcedenteDisplay && miniExcedenteWrapper) {
+                miniExcedenteDisplay.textContent = formatCurrency(diferenciaGeneral);
+                miniExcedenteWrapper.style.color = diferenciaGeneral < 0 ? 'var(--color-error)' : 'var(--color-exito)';
+            }
+
+            const tipoCambio = parseFloat(tipoCambioInput.value) || 1;
+            if (currentCurrency === 'USD') {
+                totalConversionDisplay.textContent = formatCurrency(precioDelEvento * tipoCambio, 'CRC');
+                grandTotalNacionalesCrc.textContent = formatCurrency(grandTotal * tipoCambio, 'CRC');
+                diferenciaNacionalesCrc.textContent = formatCurrency(diferencia * tipoCambio, 'CRC');
+                diferenciaGeneralNacionalesCrc.textContent = formatCurrency(diferenciaGeneral * tipoCambio, 'CRC');
+                
+                if (totalRecogerCrcContainer) {
+                    totalRecogerCrcContainer.textContent = formatCurrency(totalPorRecoger * tipoCambio, 'CRC');
+                }
+                if (totalRecogerCrcWrapper) totalRecogerCrcWrapper.style.display = 'block';
+                
+                diferenciaNacionalesCrc.parentElement.classList.toggle('text-danger', diferencia * tipoCambio < 0);
+                diferenciaGeneralNacionalesCrc.parentElement.classList.toggle('text-danger', diferenciaGeneral * tipoCambio < 0);
+
+                crcConversionWrappers.forEach(wrapper => {
+                    if(wrapper.id !== 'total-por-recoger-crc-wrapper') wrapper.style.display = 'block';
+                });
+            } else { 
+                totalConversionDisplay.textContent = formatCurrency(precioDelEvento / tipoCambio, 'USD');
+                crcConversionWrappers.forEach(wrapper => wrapper.style.display = 'none');
+                if (totalRecogerCrcWrapper) totalRecogerCrcWrapper.style.display = 'none';
+            }
+            
+            // Lógica combinada de alerta visual
+            if (diferenciaGeneral < 0) {
+                if (alertaPerdidaHabilitada) {
+                    showLossWarningModal();
+                } else {
+                    let shouldAlert = false;
+                    if (triggerCard) {
+                        const localBtn = triggerCard.querySelector('.local-alert-btn');
+                        if (localBtn && localBtn.dataset.alert === 'true') {
+                            shouldAlert = true;
+                        }
+                    } else {
+                        const anyLocalAlertOn = Array.from(list.querySelectorAll('.local-alert-btn')).some(btn => btn.dataset.alert === 'true');
+                        if (anyLocalAlertOn) shouldAlert = true;
+                    }
+
+                    if (shouldAlert) {
+                        showLossWarningModal();
+                    }
+                }
+            }
+        }
+
+        function updateAllTotals() {
+            document.querySelectorAll('.item-card').forEach(card => {
+                updateTotals(card.querySelector('input'));
+            });
+            calculateGrandTotal('transporte-nacional-list');
+        }
+        
+        // --- LÓGICA DE MODALES ---
+        const notificationModal = document.getElementById('notification-modal');
+        function showNotification(message) {
+            notificationModal.querySelector('#notification-message').textContent = message;
+            notificationModal.classList.add('visible');
+        }
+        notificationModal.querySelector('#notification-accept-btn').addEventListener('click', () => notificationModal.classList.remove('visible'));
+
+        function showLossWarningModal() {
+            lossWarningModal.classList.add('visible');
+        }
+        lossWarningCloseBtn.addEventListener('click', () => lossWarningModal.classList.remove('visible'));
+
+        let deleteAction = null; 
+        let addAction = null;
+
+        function openDeleteModal(message, onConfirm) {
+            deleteConfirmMessage.textContent = message;
+            deleteAction = onConfirm;
+            deleteConfirmModal.classList.add('visible');
+        }
+
+        function closeDeleteModal() {
+            deleteConfirmModal.classList.remove('visible');
+            deleteAction = null;
+        }
+
+        deleteCancelBtn.addEventListener('click', closeDeleteModal);
+        deleteConfirmBtn.addEventListener('click', () => {
+            if (deleteAction) {
+                deleteAction();
+            }
+            closeDeleteModal();
+        });
+
+        function openAddModal(onConfirm) {
+            addAction = onConfirm;
+            addConfirmModal.classList.add('visible');
+        }
+
+        function closeAddModal() {
+            addConfirmModal.classList.remove('visible');
+            addAction = null;
+        }
+        addCancelBtn.addEventListener('click', closeAddModal);
+        addConfirmBtn.addEventListener('click', () => {
+            if (addAction) {
+                addAction();
+            }
+            closeAddModal();
+        });
+
+        // Eventos Tarjeta Viaje
+        tarjetaViajeCloseBtn.addEventListener('click', () => {
+            tarjetaViajeModal.classList.remove('visible');
+        });
+
+        tarjetaViajePrintBtn.addEventListener('click', () => {
+            const printContent = document.getElementById('exportable-travel-card').cloneNode(true);
+            const printWindow = window.open('', '_blank');
+            
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Imprimir Tarjeta de Viaje</title>
+                    <style>
+                        body { 
+                            margin: 0; 
+                            padding: 40px; 
+                            font-family: Arial, sans-serif; 
+                            display: flex; 
+                            justify-content: center;
+                        }
+                        @media print { 
+                            body { margin: 0; padding: 0; } 
+                            /* Asegurar que se impriman los colores de fondo */
+                            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${printContent.outerHTML}
+                </body>
+                </html>
+            `);
+            
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+                printWindow.print();
+                printWindow.close();
+            }, 500);
+        });
+
+        tarjetaViajeDownloadBtn.addEventListener('click', () => {
+            const cardElement = document.getElementById('exportable-travel-card');
+            if (!cardElement) return;
+            
+            html2canvas(cardElement, {
+                scale: 2, 
+                useCORS: true,
+                backgroundColor: null 
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `tarjeta_viaje_${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                showNotification('Tarjeta de Viaje exportada exitosamente');
+            }).catch(error => {
+                console.error('Error al exportar la tarjeta:', error);
+                showNotification('Hubo un error al exportar la tarjeta. Inténtalo de nuevo.');
+            });
+        });
+
+        tarjetaViajeWhatsappBtn.addEventListener('click', () => {
+            if (!currentWhatsAppText) return;
+            
+            const encodedText = encodeURIComponent(currentWhatsAppText);
+            const whatsappUrl = `https://wa.me/?text=${encodedText}`;
+            
+            // Intenta usar el Web Share API si está en móvil
+            if (navigator.share && /Mobi|Android/i.test(navigator.userAgent)) {
+                navigator.share({
+                    text: currentWhatsAppText
+                }).catch((error) => {
+                    console.log('Error compartiendo, usando enlace alternativo', error);
+                    window.open(whatsappUrl, '_blank');
+                });
+            } else {
+                window.open(whatsappUrl, '_blank');
+            }
+        });
+
+        // --- EXPORTAR A EXCEL TODOS LOS EVENTOS ---
+        exportExcelBtn.addEventListener('click', () => {
+            if (allEventsCache.length === 0) {
+                showNotification('No hay eventos guardados para exportar.');
+                return;
+            }
+
+            let table = `<table border="1">
+                <thead>
+                    <tr>
+                        <th style="background-color:#8d6e63;color:white;font-weight:bold;">Nombre del Evento</th>
+                        <th style="background-color:#8d6e63;color:white;font-weight:bold;">Moneda</th>
+                        <th style="background-color:#8d6e63;color:white;font-weight:bold;">Precio Base</th>
+                        <th style="background-color:#8d6e63;color:white;font-weight:bold;">Capacidad C/G</th>
+                        <th style="background-color:#8d6e63;color:white;font-weight:bold;">Capacidad S/G</th>
+                        <th style="background-color:#8d6e63;color:white;font-weight:bold;">Total Costos</th>
+                        <th style="background-color:#8d6e63;color:white;font-weight:bold;">Excedente P.P</th>
+                        <th style="background-color:#8d6e63;color:white;font-weight:bold;">Excedente General</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            let granExcedenteTotalCRC = 0;
+            let granExcedenteTotalUSD = 0;
+
+            allEventsCache.forEach(evento => {
+                let granTotalCostos = 0;
+                const capacidadCG = parseFloat(evento.capacidadCG) || 0;
+                const capacidadSG = parseFloat(evento.capacidadSG) || 1;
+                const precioDelEvento = parseFloat(evento.precio) || 0;
+
+                if (evento.pagos && evento.pagos.length > 0) {
+                    evento.pagos.forEach(pago => {
+                        let precioUnitario = 0;
+                        if (pago.tipoPrecio === 'persona') {
+                            precioUnitario = (parseFloat(pago.precioPersona) || 0) * capacidadCG / capacidadSG;
+                        } else {
+                            precioUnitario = (parseFloat(pago.precioGrupal) || 0) / capacidadSG;
+                        }
+                        const cantidad = (pago.dynamicFields && pago.dynamicFields.cantidad) ? parseFloat(pago.dynamicFields.cantidad) : 1;
+                        granTotalCostos += (precioUnitario * cantidad);
+                    });
+                }
+
+                const diferencia = precioDelEvento - granTotalCostos;
+                const diferenciaGeneral = diferencia * capacidadSG;
+
+                if (evento.moneda === 'CRC') granExcedenteTotalCRC += diferenciaGeneral;
+                else granExcedenteTotalUSD += diferenciaGeneral;
+
+                table += `<tr>
+                    <td>${evento.nombre}</td>
+                    <td style="text-align:center;">${evento.moneda}</td>
+                    <td style="text-align:right;">${precioDelEvento.toFixed(2)}</td>
+                    <td style="text-align:center;">${capacidadCG}</td>
+                    <td style="text-align:center;">${capacidadSG}</td>
+                    <td style="text-align:right;">${granTotalCostos.toFixed(2)}</td>
+                    <td style="text-align:right;">${diferencia.toFixed(2)}</td>
+                    <td style="text-align:right; font-weight:bold; color:${diferenciaGeneral < 0 ? 'red' : 'green'}">${diferenciaGeneral.toFixed(2)}</td>
+                </tr>`;
+            });
+
+            table += `<tr><td colspan="8"></td></tr>`;
+            
+            // Fila Total CRC
+            table += `<tr>
+                <td colspan="7" style="text-align:right;font-weight:bold;font-size:1.1em;">GRAN EXCEDENTE TOTAL GLOBAL (CRC):</td>
+                <td style="text-align:right;font-weight:bold;font-size:1.1em;color:${granExcedenteTotalCRC < 0 ? 'red' : 'green'}">₡${granExcedenteTotalCRC.toFixed(2)}</td>
+            </tr>`;
+            // Fila Total USD
+            table += `<tr>
+                <td colspan="7" style="text-align:right;font-weight:bold;font-size:1.1em;">GRAN EXCEDENTE TOTAL GLOBAL (USD):</td>
+                <td style="text-align:right;font-weight:bold;font-size:1.1em;color:${granExcedenteTotalUSD < 0 ? 'red' : 'green'}">$${granExcedenteTotalUSD.toFixed(2)}</td>
+            </tr>`;
+
+            table += `</tbody></table>`;
+
+            // Construir HTML para el archivo .xls
+            const htmlExcel = `
+                <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+                <head>
+                    <meta charset="UTF-8">
+                    <!--[if gte mso 9]>
+                    <xml>
+                        <x:ExcelWorkbook>
+                            <x:ExcelWorksheets>
+                                <x:ExcelWorksheet>
+                                    <x:Name>Eventos</x:Name>
+                                    <x:WorksheetOptions>
+                                        <x:DisplayGridlines/>
+                                    </x:WorksheetOptions>
+                                </x:ExcelWorksheet>
+                            </x:ExcelWorksheets>
+                        </x:ExcelWorkbook>
+                    </xml>
+                    <![endif]-->
+                </head>
+                <body>
+                    ${table}
+                </body>
+                </html>
+            `;
+
+            const blob = new Blob([htmlExcel], { type: 'application/vnd.ms-excel' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Reporte_Eventos_JyK_${new Date().toISOString().slice(0, 10)}.xls`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('Reporte Excel descargado exitosamente.');
+        });
+
+        // --- NUEVA LÓGICA: TARJETA DE RESUMEN GLOBAL ---
+        const generarResumenBtn = document.getElementById('generar-resumen-btn');
+        const tarjetaResumenModal = document.getElementById('tarjeta-resumen-modal');
+        const tarjetaResumenCloseBtn = document.getElementById('tarjeta-resumen-close-btn');
+        const tarjetaResumenRenderArea = document.getElementById('tarjeta-resumen-render-area');
+        const tarjetaResumenDownloadBtn = document.getElementById('tarjeta-resumen-download-btn');
+
+        if (generarResumenBtn) {
+            generarResumenBtn.addEventListener('click', () => {
+                let totalEventos = allEventsCache.length;
+                let totalRecs = allRecsCache.length;
+                
+                let excedenteCRC = 0;
+                let excedenteUSD = 0;
+
+                // Calcular rentabilidad global sumada
+                allEventsCache.forEach(evento => {
+                    let granTotalCostos = 0;
+                    const capacidadCG = parseFloat(evento.capacidadCG) || 0;
+                    const capacidadSG = parseFloat(evento.capacidadSG) || 1;
+                    const precioDelEvento = parseFloat(evento.precio) || 0;
+
+                    if (evento.pagos && evento.pagos.length > 0) {
+                        evento.pagos.forEach(pago => {
+                            let precioUnitario = 0;
+                            if (pago.tipoPrecio === 'persona') {
+                                precioUnitario = (parseFloat(pago.precioPersona) || 0) * capacidadCG / capacidadSG;
+                            } else {
+                                precioUnitario = (parseFloat(pago.precioGrupal) || 0) / capacidadSG;
+                            }
+                            const cantidad = (pago.dynamicFields && pago.dynamicFields.cantidad) ? parseFloat(pago.dynamicFields.cantidad) : 1;
+                            granTotalCostos += (precioUnitario * cantidad);
+                        });
+                    }
+
+                    const diferencia = precioDelEvento - granTotalCostos;
+                    const diferenciaGeneral = diferencia * capacidadSG;
+
+                    if (evento.moneda === 'CRC') {
+                        excedenteCRC += diferenciaGeneral;
+                    } else {
+                        excedenteUSD += diferenciaGeneral;
+                    }
+                });
+
+                const colorCRC = excedenteCRC < 0 ? 'var(--color-error)' : 'var(--color-exito)';
+
+                const cardHTML = `
+                    <div id="exportable-resumen-card" style="background-color: var(--color-blanco); color: var(--color-texto); width: 100%; max-width: 450px; padding: 30px; border-radius: 16px; border: 2px solid var(--color-primario); font-family: sans-serif; box-sizing: border-box; position: relative; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                        <div style="position: absolute; top: -30px; left: -30px; width: 120px; height: 120px; background-color: var(--color-primario); opacity: 0.15; border-radius: 50%;"></div>
+                        <div style="position: absolute; bottom: -40px; right: -40px; width: 160px; height: 160px; background-color: var(--color-acento); opacity: 0.15; border-radius: 50%;"></div>
+                        
+                        <div style="position: relative; z-index: 2;">
+                            <h2 style="text-align: center; color: var(--color-primario); margin: 0 0 5px 0; font-size: 1.6rem; text-transform: uppercase;">Resumen Global</h2>
+                            <p style="text-align: center; margin: 0 0 25px 0; font-size: 0.9rem; opacity: 0.8;">Gestión de Pagos JyK</p>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px;">
+                                <div style="background-color: var(--color-fondo); border: 1px solid var(--color-secundario); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                                    <div style="font-size: 2rem; font-weight: bold; color: var(--color-primario); line-height: 1;">${totalEventos}</div>
+                                    <div style="font-size: 0.85rem; font-weight: 600; margin-top: 5px;">Eventos<br>Registrados</div>
+                                </div>
+                                <div style="background-color: var(--color-fondo); border: 1px solid var(--color-secundario); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                                    <div style="font-size: 2rem; font-weight: bold; color: var(--color-primario); line-height: 1;">${totalRecs}</div>
+                                    <div style="font-size: 0.85rem; font-weight: 600; margin-top: 5px;">Lugares<br>Reconocidos</div>
+                                </div>
+                            </div>
+
+                            <h3 style="color: var(--color-primario); margin: 0 0 10px 0; font-size: 1.1rem; border-bottom: 2px solid var(--color-secundario); padding-bottom: 5px;">Rentabilidad Acumulada</h3>
+                            <div style="background: var(--color-fondo); padding: 15px; border-radius: 12px; border: 1px solid var(--color-secundario);">
+                                <div style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 5px;">
+                                    <strong style="font-size: 0.9rem;">Total Excedente (CRC):</strong>
+                                    <span style="color: ${colorCRC}; font-weight: bold; font-size: 1.2rem; flex-grow: 1; text-align: right;">${formatCurrency(excedenteCRC, 'CRC')}</span>
+                                </div>
+                            </div>
+
+                            <div style="text-align: center; margin-top: 30px; font-size: 0.75rem; opacity: 0.6; border-top: 1px solid var(--color-secundario); padding-top: 15px;">
+                                Generado el ${new Date().toLocaleDateString('es-CR')} a las ${new Date().toLocaleTimeString('es-CR')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                tarjetaResumenRenderArea.innerHTML = cardHTML;
+                tarjetaResumenModal.classList.add('visible');
+            });
+
+            tarjetaResumenCloseBtn.addEventListener('click', () => {
+                tarjetaResumenModal.classList.remove('visible');
+            });
+
+            tarjetaResumenDownloadBtn.addEventListener('click', () => {
+                const cardElement = document.getElementById('exportable-resumen-card');
+                if (!cardElement) return;
+                
+                html2canvas(cardElement, {
+                    scale: 2, 
+                    useCORS: true,
+                    backgroundColor: null 
+                }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = `resumen_global_${Date.now()}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    showNotification('Resumen exportado exitosamente');
+                }).catch(error => {
+                    console.error('Error al exportar el resumen:', error);
+                    showNotification('Hubo un error al exportar la tarjeta. Inténtalo de nuevo.');
+                });
+            });
+        }
+
+
+        // --- LÓGICA DE CONFIRMACIÓN DE EDICIÓN ---
+        function startEditConfirmation(id) {
+            eventToLoadId = id;
+            editConfirmMessage.textContent = '¿Estás seguro de que deseas editar este evento? (Se reemplazará la información actual en pantalla)';
+            editConfirmModal.classList.add('visible');
+        }
+
+        editConfirmBtn.addEventListener('click', () => {
+            editConfirmModal.classList.remove('visible');
+            if (eventToLoadId !== null) {
+                loadEventData(eventToLoadId);
+                eventToLoadId = null;
+            }
+        });
+
+        editCancelBtn.addEventListener('click', () => {
+            editConfirmModal.classList.remove('visible');
+            eventToLoadId = null;
+        });
+
+        function showTarjetaViaje(id) {
+            db.transaction(['eventos'], 'readonly').objectStore('eventos').get(id).onsuccess = (e) => {
+                const evento = e.target.result;
+                if (!evento) return;
+
+                let granTotal = 0;
+                const capacidadCG = parseFloat(evento.capacidadCG) || 0;
+                const capacidadSG = parseFloat(evento.capacidadSG) || 1;
+                const precioDelEvento = parseFloat(evento.precio) || 0;
+
+                let pagosHTML = '';
+                let pagosParaWhatsApp = []; // Array para construir el texto de WA
+
+                if (evento.pagos && evento.pagos.length > 0) {
+                    evento.pagos.forEach(pago => {
+                        let precioUnitario = 0;
+                        let precioBaseMostrar = 0;
+                        let etiquetaBase = '';
+
+                        if (pago.tipoPrecio === 'persona') {
+                            precioBaseMostrar = parseFloat(pago.precioPersona) || 0;
+                            etiquetaBase = 'P/P';
+                            precioUnitario = precioBaseMostrar * capacidadCG / capacidadSG;
+                        } else {
+                            precioBaseMostrar = parseFloat(pago.precioGrupal) || 0;
+                            etiquetaBase = 'Grupal';
+                            precioUnitario = precioBaseMostrar / capacidadSG;
+                        }
+                        
+                        const cantidad = (pago.dynamicFields && pago.dynamicFields.cantidad) ? parseFloat(pago.dynamicFields.cantidad) : 1;
+                        const totalPago = precioUnitario * cantidad;
+                        granTotal += totalPago;
+
+                        const precioBaseFormateado = formatCurrency(precioBaseMostrar, evento.moneda);
+                        const totalPagoFormateado = formatCurrency(totalPago, evento.moneda);
+
+                        // Agregamos al HTML de la tarjeta visual
+                        // SE APLICÓ LA CORRECCIÓN DE FLEX-WRAP AQUÍ
+                        pagosHTML += `
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 5px; border-bottom: 1px dashed var(--color-secundario); padding: 8px 0; font-size: 0.95rem;">
+                                <span style="font-weight: 500; flex: 1 1 min-content; word-break: break-word; min-width: 60%;">${pago.nombre} ${cantidad > 1 ? `(x${cantidad})` : ''}</span>
+                                <div style="display: flex; align-items: center; gap: 8px; text-align: right; flex: 1 0 auto; justify-content: flex-end;">
+                                    <span style="font-size: 0.75rem; opacity: 0.6; white-space: nowrap;">(${etiquetaBase} ${precioBaseFormateado})</span>
+                                    <span style="font-weight: bold; white-space: nowrap;">${totalPagoFormateado}</span>
+                                </div>
+                            </div>
+                        `;
+
+                        // Agregamos al Array para WhatsApp
+                        pagosParaWhatsApp.push({
+                            nombre: pago.nombre,
+                            cantidad: cantidad,
+                            etiquetaBase: etiquetaBase,
+                            precioBaseStr: precioBaseFormateado,
+                            totalPagoStr: totalPagoFormateado
+                        });
+                    });
+                } else {
+                    pagosHTML = '<div style="text-align: center; opacity: 0.8; padding: 10px;">No hay pagos registrados</div>';
+                }
+
+                const diferencia = precioDelEvento - granTotal;
+                const diferenciaGeneral = diferencia * capacidadSG;
+                const totalPorRecoger = precioDelEvento * capacidadSG;
+
+                // Color dinámico según rentabilidad
+                const colorDiferencia = diferencia < 0 ? '#e57373' : '#81c784';
+                const colorDiferenciaG = diferenciaGeneral < 0 ? '#e57373' : '#81c784';
+
+                // ============================================
+                // GENERADOR DE TEXTO PARA WHATSAPP (FACTURA)
+                // ============================================
+                currentWhatsAppText = `🎫 *TARJETA DE VIAJE* 🎫\n\n`;
+                currentWhatsAppText += `*Evento:* ${evento.nombre}\n`;
+                currentWhatsAppText += `*Precio Base:* ${formatCurrency(precioDelEvento, evento.moneda)}\n`;
+                currentWhatsAppText += `*Moneda:* ${evento.moneda}\n`;
+                currentWhatsAppText += `*Capacidad:* ${evento.capacidadCG} C/G | ${evento.capacidadSG} S/G\n`;
+                currentWhatsAppText += `\n*📋 DESGLOSE DE COSTOS:*\n`;
+                currentWhatsAppText += `------------------------\n`;
+                
+                if (pagosParaWhatsApp.length > 0) {
+                    pagosParaWhatsApp.forEach(p => {
+                        currentWhatsAppText += `• ${p.nombre} ${p.cantidad > 1 ? `(x${p.cantidad})` : ''}\n`;
+                        currentWhatsAppText += `  _(${p.etiquetaBase} ${p.precioBaseStr})_ ➡️ *${p.totalPagoStr}*\n`;
+                    });
+                } else {
+                    currentWhatsAppText += `  _Sin pagos registrados_\n`;
+                }
+                currentWhatsAppText += `------------------------\n`;
+                currentWhatsAppText += `\n*📊 RENTABILIDAD Y TOTALES:*\n`;
+                currentWhatsAppText += `*TOTAL A RECOGER:* ${formatCurrency(totalPorRecoger, evento.moneda)}\n`;
+                currentWhatsAppText += `*TOTAL COSTOS P.P:* ${formatCurrency(granTotal, evento.moneda)}\n`;
+                currentWhatsAppText += `*EXCEDENTE P.P:* ${formatCurrency(diferencia, evento.moneda)}\n`;
+                currentWhatsAppText += `*EXCEDENTE GENERAL:* ${formatCurrency(diferenciaGeneral, evento.moneda)}\n`;
+                currentWhatsAppText += `\n_Generado automáticamente por Gestión de Pagos JyK_`;
+
+                // ============================================
+                // GENERADOR HTML DE LA TARJETA VISUAL
+                // ============================================
+                const cardHTML = `
+                    <div id="exportable-travel-card" style="background-color: var(--color-fondo); color: var(--color-texto); width: 100%; max-width: 450px; padding: 25px; border-radius: 16px; border: 2px solid var(--color-primario); font-family: sans-serif; box-sizing: border-box; position: relative; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                        
+                        <!-- Elementos de Decoración Visual -->
+                        <div style="position: absolute; top: -30px; right: -30px; width: 120px; height: 120px; background-color: var(--color-primario); opacity: 0.15; border-radius: 50%;"></div>
+                        <div style="position: absolute; bottom: -40px; left: -40px; width: 160px; height: 160px; background-color: var(--color-acento); opacity: 0.15; border-radius: 50%;"></div>
+                        
+                        <div style="position: relative; z-index: 2;">
+                            <h2 style="text-align: center; color: var(--color-primario); margin: 0 0 5px 0; font-size: 1.6rem; text-transform: uppercase;">${evento.nombre}</h2>
+                            <p style="text-align: center; margin: 0 0 20px 0; font-size: 0.9rem; opacity: 0.8;">Resumen Detallado de Viaje</p>
+                            
+                            <!-- Sección Resumen Principal -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: var(--color-blanco); padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-size: 0.9rem;">
+                                <div><strong>Precio Base:</strong><br/>${formatCurrency(precioDelEvento, evento.moneda)}</div>
+                                <div><strong>Moneda:</strong><br/>${evento.moneda}</div>
+                                <div><strong>Capacidad C/G:</strong><br/>${evento.capacidadCG} pax</div>
+                                <div><strong>Capacidad S/G:</strong><br/>${evento.capacidadSG} pax</div>
+                            </div>
+
+                            <!-- Desglose de Pagos -->
+                            <h3 style="color: var(--color-primario); margin: 0 0 10px 0; font-size: 1.1rem; border-bottom: 2px solid var(--color-secundario); padding-bottom: 5px;">Desglose de Costos</h3>
+                            <div style="background: var(--color-blanco); padding: 10px 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                                ${pagosHTML}
+                            </div>
+
+                            <!-- Totales Finales -->
+                            <h3 style="color: var(--color-primario); margin: 0 0 10px 0; font-size: 1.1rem; border-bottom: 2px solid var(--color-secundario); padding-bottom: 5px;">Rentabilidad y Totales</h3>
+                            <div style="background: var(--color-blanco); padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <strong>TOTAL A RECOGER:</strong>
+                                    <span style="font-weight: bold;">${formatCurrency(totalPorRecoger, evento.moneda)}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <strong>TOTAL COSTOS P.P:</strong>
+                                    <span style="font-weight: bold;">${formatCurrency(granTotal, evento.moneda)}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <strong>EXCEDENTE P.P:</strong>
+                                    <span style="color: ${colorDiferencia}; font-weight: bold;">${formatCurrency(diferencia, evento.moneda)}</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--color-secundario); padding-top: 8px; margin-top: 8px;">
+                                    <strong>EXCEDENTE GENERAL:</strong>
+                                    <span style="color: ${colorDiferenciaG}; font-weight: bold; font-size: 1.2rem;">${formatCurrency(diferenciaGeneral, evento.moneda)}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Footer de tarjeta -->
+                            <div style="text-align: center; margin-top: 20px; font-size: 0.75rem; opacity: 0.6;">
+                                Generado el ${new Date().toLocaleDateString('es-CR')} a las ${new Date().toLocaleTimeString('es-CR')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                tarjetaViajeRenderArea.innerHTML = cardHTML;
+                tarjetaViajeModal.classList.add('visible');
+            };
+        }
+
+        // --- LÓGICA DE TEMAS ---
+        const themes = ['theme-sepia', 'theme-dark'];
+        
+        function applyTheme(theme) {
+            document.body.className = theme;
+            localStorage.setItem('theme', theme);
+            const themeColor = getComputedStyle(document.body).getPropertyValue('--color-primario').trim();
+            document.querySelector('meta[name="theme-color"]').setAttribute('content', themeColor);
+        }
+
+        function populateThemeSelector() {
+            const themeGrid = document.getElementById('theme-selector-grid');
+            themes.forEach(themeClass => {
+                const swatch = document.createElement('div');
+                swatch.className = `theme-swatch ${themeClass}`;
+                swatch.dataset.theme = themeClass;
+                const tempDiv = document.createElement('div');
+                tempDiv.style.display = 'none';
+                tempDiv.className = themeClass;
+                document.body.appendChild(tempDiv);
+                const color = getComputedStyle(tempDiv).getPropertyValue('--color-primario');
+                document.body.removeChild(tempDiv);
+                swatch.style.backgroundColor = color;
+                
+                themeGrid.appendChild(swatch);
+            });
+            
+            themeGrid.addEventListener('click', (e) => {
+                if (e.target.classList.contains('theme-swatch')) {
+                    applyTheme(e.target.dataset.theme);
+                }
+            });
+        }
+
+        // --- LÓGICA DE EVENTOS (GUARDAR/CARGAR/BORRAR) ---
+        
+        nuevoEventoBtn.addEventListener('click', () => {
+            currentEventId = null;
+            eventoNombre.value = '';
+            eventoPrecio.value = '0';
+            eventoCapacidadCG.value = '0';
+            eventoCapacidadSG.value = '0';
+            document.getElementById('transporte-nacional-list').innerHTML = '';
+            updateAllTotals();
+            showNotification('Formulario limpiado. Listo para un nuevo evento.');
+        });
+
+        function getPagoDataFromCard(card) {
+            const pago = {
+                nombre: card.querySelector('.item-nombre').value,
+                tipoPrecio: card.querySelector('.price-type-selector').value,
+                precioPersona: card.querySelector('.item-price-per-person')?.value || '0',
+                precioGrupal: card.querySelector('.item-price-grupal')?.value || '0',
+                alertaLocal: card.querySelector('.local-alert-btn')?.dataset.alert === 'true',
+                dynamicFields: {}
+            };
+
+            card.querySelectorAll('.dynamic-fields-container > .form-group').forEach(group => {
+                const fieldName = group.dataset.fieldName;
+                if (!fieldName) return;
+
+                if (fieldName === 'aerolinea') {
+                    const airlineData = { nombre: group.querySelector('.airline-selector')?.value || '' };
+                    group.querySelectorAll('.airline-price').forEach(priceInput => {
+                        const key = priceInput.id.replace(`aerolinea-${card.id}-`, '').replace(/-/g, '_');
+                        airlineData[key] = priceInput.value;
+                    });
+                    pago.dynamicFields.aerolinea = airlineData;
+                } else if (fieldName === 'impuesto') {
+                    pago.dynamicFields.impuesto = {
+                        aplica: group.querySelector('.impuesto-selector').value,
+                        monto: group.querySelector('.monto-impuesto-container input')?.value || '0'
+                    };
+                } else {
+                    const input = group.querySelector('input, select, textarea');
+                    if (input) pago.dynamicFields[fieldName] = input.value;
+                }
+            });
+            return pago;
+        }
+
+        guardarEventoBtn.addEventListener('click', () => {
+            const nombre = eventoNombre.value.trim();
+            if (!nombre) {
+                showNotification('Por favor, ingresa un nombre para el evento antes de guardar.');
+                return;
+            }
+
+            const pagos = [];
+            document.querySelectorAll('#transporte-nacional-list .item-card').forEach(card => {
+                pagos.push(getPagoDataFromCard(card));
+            });
+
+            const evento = {
+                nombre,
+                precio: eventoPrecio.value,
+                capacidadCG: eventoCapacidadCG.value,
+                capacidadSG: eventoCapacidadSG.value,
+                tipoCambio: tipoCambioInput.value,
+                moneda: currentCurrency,
+                pagos
+            };
+
+            const transaction = db.transaction(['eventos'], 'readwrite');
+            const store = transaction.objectStore('eventos');
+            if (currentEventId) evento.id = currentEventId;
+
+            const request = currentEventId ? store.put(evento) : store.add(evento);
+
+            request.onsuccess = () => {
+                showNotification(`Evento "${nombre}" guardado exitosamente.`);
+                loadEvents();
+                if (!currentEventId) currentEventId = request.result;
+            };
+            request.onerror = (e) => {
+                showNotification('Error al guardar el evento.');
+                console.error('Error al guardar:', e.target.error);
+            };
+        });
+
+        function deleteEvent(id) {
+            openDeleteModal('¿Estás seguro de que deseas eliminar este evento guardado?', () => {
+                const transaction = db.transaction(['eventos'], 'readwrite');
+                transaction.objectStore('eventos').delete(id).onsuccess = () => {
+                    showNotification('Evento eliminado.');
+                    loadEvents(); 
+                };
+            });
+        }
+
+        // --- LÓGICA DE BÚSQUEDA Y RENDERIZADO ---
+        
+        function renderEventsList(eventsToRender) {
+            eventosGuardadosList.innerHTML = '';
+            
+            if (eventsToRender.length === 0) {
+                eventosGuardadosList.innerHTML = '<p style="color:var(--color-texto); width:100%; text-align:center;">No se encontraron eventos.</p>';
+                return;
+            }
+
+            eventsToRender.forEach(evento => {
+                const btn = document.createElement('button');
+                btn.className = 'evento-guardado-btn';
+                btn.dataset.eventId = evento.id;
+                
+                let grandTotal = 0;
+                const capacidadCG = parseFloat(evento.capacidadCG) || 0;
+                const capacidadSG = parseFloat(evento.capacidadSG) || 1;
+                if (evento.pagos) {
+                    evento.pagos.forEach(pago => {
+                        let baseTotal = 0;
+                        if (pago.tipoPrecio === 'persona') {
+                            baseTotal = (parseFloat(pago.precioPersona) || 0) * capacidadCG / capacidadSG;
+                        } else {
+                            baseTotal = (parseFloat(pago.precioGrupal) || 0) / capacidadSG;
+                        }
+                        const cantidad = (pago.dynamicFields && pago.dynamicFields.cantidad) ? parseFloat(pago.dynamicFields.cantidad) : 1;
+                        grandTotal += baseTotal * cantidad;
+                    });
+                }
+
+                btn.innerHTML = `
+                    <div>
+                        <strong>${evento.nombre}</strong>
+                        <small>TOTAL P/P: ${formatCurrency(grandTotal, evento.moneda)}</small>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn-tarjeta-evento" data-event-id="${evento.id}" aria-label="Ver Tarjeta de Viaje">
+                            <!-- Ícono de Tarjeta/Imagen -->
+                            <svg viewBox="0 0 24 24"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zm-10-7h9v6h-9z"/></svg>
+                        </button>
+                        <button class="btn-delete-evento" data-event-id="${evento.id}" aria-label="Eliminar Evento">
+                            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </button>
+                    </div>`;
+                
+                btn.addEventListener('click', (e) => {
+                    if (e.target.closest('.btn-delete-evento')) {
+                        e.stopPropagation();
+                        deleteEvent(evento.id);
+                    } else if (e.target.closest('.btn-tarjeta-evento')) {
+                        e.stopPropagation();
+                        showTarjetaViaje(evento.id);
+                    } else {
+                        // Al tocar el cuerpo del botón, se abre la confirmación de edición
+                        startEditConfirmation(evento.id);
+                    }
+                });
+                eventosGuardadosList.appendChild(btn);
+            });
+        }
+
+        // Listener de Búsqueda
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            
+            if (searchTerm === '') {
+                eventosGuardadosWrapper.style.display = 'none';
+                toggleEventosListBtn.textContent = 'Mostrar Lista';
+                return;
+            }
+
+            // Filtrar eventos
+            const filteredEvents = allEventsCache.filter(evento => {
+                const nombreMatch = evento.nombre.toLowerCase().includes(searchTerm);
+                let grandTotal = 0;
+                const capacidadCG = parseFloat(evento.capacidadCG) || 0;
+                const capacidadSG = parseFloat(evento.capacidadSG) || 1;
+                if (evento.pagos) {
+                    evento.pagos.forEach(pago => {
+                        let baseTotal = 0;
+                        if (pago.tipoPrecio === 'persona') {
+                            baseTotal = (parseFloat(pago.precioPersona) || 0) * capacidadCG / capacidadSG;
+                        } else {
+                            baseTotal = (parseFloat(pago.precioGrupal) || 0) / capacidadSG;
+                        }
+                        const cantidad = (pago.dynamicFields && pago.dynamicFields.cantidad) ? parseFloat(pago.dynamicFields.cantidad) : 1;
+                        grandTotal += baseTotal * cantidad;
+                    });
+                }
+                const precioMatch = grandTotal.toString().includes(searchTerm);
+                
+                return nombreMatch || precioMatch;
+            });
+
+            // Mostrar resultados y abrir contenedor
+            renderEventsList(filteredEvents);
+            eventosGuardadosWrapper.style.display = 'block';
+            toggleEventosListBtn.textContent = 'Ocultar Lista';
+        });
+
+        // Botón Toggle Manual
+        toggleEventosListBtn.addEventListener('click', () => {
+            if (eventosGuardadosWrapper.style.display === 'none') {
+                // Mostrar todo
+                renderEventsList(allEventsCache);
+                eventosGuardadosWrapper.style.display = 'block';
+                toggleEventosListBtn.textContent = 'Ocultar Lista';
+            } else {
+                // Ocultar
+                eventosGuardadosWrapper.style.display = 'none';
+                toggleEventosListBtn.textContent = 'Mostrar Lista';
+            }
+        });
+
+        function loadEvents() {
+            const store = db.transaction(['eventos'], 'readonly').objectStore('eventos');
+            store.getAll().onsuccess = (e) => {
+                allEventsCache = e.target.result; 
+                eventosGuardadosWrapper.style.display = 'none';
+                toggleEventosListBtn.textContent = 'Mostrar Lista';
+                searchInput.value = ''; 
+            };
+        }
+
+        function loadEventData(id) {
+            db.transaction(['eventos'], 'readonly').objectStore('eventos').get(id).onsuccess = (e) => {
+                const evento = e.target.result;
+                if (!evento) return;
+
+                console.log("Cargando evento:", evento);
+
+                currentEventId = evento.id;
+                eventoNombre.value = evento.nombre;
+                eventoPrecio.value = evento.precio;
+                eventoCapacidadCG.value = evento.capacidadCG;
+                eventoCapacidadSG.value = evento.capacidadSG;
+                tipoCambioInput.value = evento.tipoCambio;
+                currencySelector.value = evento.moneda;
+                currencySelector.dispatchEvent(new Event('change'));
+
+                const pagosList = document.getElementById('transporte-nacional-list');
+                pagosList.innerHTML = '';
+
+                if (evento.pagos) {
+                    evento.pagos.forEach(pago => {
+                        const cardWrapper = document.createElement('div');
+                        cardWrapper.innerHTML = createItemHTML();
+                        const cardElement = cardWrapper.firstElementChild;
+                        
+                        cardElement.querySelector('.item-nombre').value = pago.nombre;
+                        const priceSelector = cardElement.querySelector('.price-type-selector');
+                        priceSelector.value = pago.tipoPrecio;
+                        updatePriceFields(priceSelector, false);
+
+                        if (pago.tipoPrecio === 'persona') {
+                            const priceInput = cardElement.querySelector('.item-price-per-person');
+                            if(priceInput) priceInput.value = pago.precioPersona;
+                        } else {
+                            const priceInput = cardElement.querySelector('.item-price-grupal');
+                            if(priceInput) priceInput.value = pago.precioGrupal;
+                        }
+
+                        // Restaurar el botón de la alerta local
+                        const localAlertBtn = cardElement.querySelector('.local-alert-btn');
+                        if (localAlertBtn) {
+                            const isOn = pago.alertaLocal || false;
+                            localAlertBtn.dataset.alert = isOn ? 'true' : 'false';
+                            localAlertBtn.textContent = isOn ? 'Activada' : 'Desactivada';
+                            localAlertBtn.className = `btn local-alert-btn ${isOn ? 'btn-exito' : 'btn-secondary'}`;
+                        }
+
+                        const dynamicFieldsContainer = cardElement.querySelector('.dynamic-fields-container');
+                        const fieldSelector = cardElement.querySelector('.field-selector');
+
+                        if (pago.dynamicFields) {
+                            for (const fieldName in pago.dynamicFields) {
+                                if (!Object.prototype.hasOwnProperty.call(pago.dynamicFields, fieldName)) continue;
+                                
+                                const newFieldElement = createFieldElement(fieldName, cardElement.id);
+                                if (newFieldElement) {
+                                    dynamicFieldsContainer.appendChild(newFieldElement);
+                                    
+                                    const optionToDisable = fieldSelector.querySelector(`option[value="${fieldName}"]`);
+                                    if (optionToDisable) optionToDisable.disabled = true;
+
+                                    const fieldData = pago.dynamicFields[fieldName];
+
+                                    if (fieldName === 'aerolinea') {
+                                        const airlineSelector = newFieldElement.querySelector('.airline-selector');
+                                        if (airlineSelector) {
+                                            airlineSelector.value = fieldData.nombre || '';
+                                            airlineSelector.dispatchEvent(new Event('change'));
+                                        }
+                                        for (const key in fieldData) {
+                                            if (key !== 'nombre' && fieldData[key] !== null && fieldData[key] !== undefined) {
+                                                const inputId = `#aerolinea-${cardElement.id}-${key.replace(/_/g, '-')}`;
+                                                const priceInput = newFieldElement.querySelector(inputId);
+                                                if (priceInput) priceInput.value = fieldData[key];
+                                            }
+                                        }
+                                    } else if (fieldName === 'impuesto') {
+                                        const selector = newFieldElement.querySelector('.impuesto-selector');
+                                        const montoInput = newFieldElement.querySelector('.monto-impuesto-container input');
+                                        if (selector) selector.value = fieldData.aplica;
+                                        if (fieldData.aplica === 'si') {
+                                            const montoContainer = newFieldElement.querySelector('.monto-impuesto-container');
+                                            if(montoContainer) montoContainer.style.display = 'block';
+                                            if(montoInput) montoInput.value = fieldData.monto;
+                                        }
+                                    } else {
+                                        const input = newFieldElement.querySelector(`[id^="${fieldName}-"]`);
+                                        if (input) input.value = fieldData;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        pagosList.appendChild(cardElement);
+                    });
+                }
+                updateAllTotals(); 
+                showNotification(`Evento "${evento.nombre}" cargado.`);
+                
+                // Ocultar lista para ver el formulario cargado
+                eventosGuardadosWrapper.style.display = 'none';
+                toggleEventosListBtn.textContent = 'Mostrar Lista';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            };
+        }
+        
+        // --- INICIALIZACIÓN DE LA APP ---
+        async function initializeApp() {
+            applyTheme(localStorage.getItem('theme') || 'theme-sepia');
+            await initDB();
+            loadEvents();
+            loadReconocimientos(); // Se carga la data inicial de los reconocimientos
+            currencySelector.dispatchEvent(new Event('change'));
+            checkAutosave();
+            setInterval(updateAutosaveTimer, 1000);
+            populateThemeSelector();
+        }
+
+        // --- Lógica de Respaldo y Restauración ---
+        function checkAutosave() {
+            const lastBackupStr = localStorage.getItem('lastBackupTimestamp');
+            if (!lastBackupStr) {
+                localStorage.setItem('lastBackupTimestamp', Date.now().toString());
+                return;
+            }
+            if (Date.now() - parseInt(lastBackupStr, 10) > AUTOSAVE_INTERVAL) {
+                console.log("Realizando respaldo automático...");
+                backupData(true);
+            }
+        }
+
+        function updateAutosaveTimer() {
+            const lastBackup = parseInt(localStorage.getItem('lastBackupTimestamp') || Date.now());
+            const nextBackupTime = lastBackup + AUTOSAVE_INTERVAL;
+            const remainingTime = nextBackupTime - Date.now();
+
+            if (remainingTime <= 0) {
+                autosaveTimerDisplay.textContent = 'Iniciando respaldo...';
+                checkAutosave();
+                return;
+            }
+
+            const d = Math.floor(remainingTime / (1000 * 60 * 60 * 24));
+            const h = Math.floor((remainingTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const m = Math.floor((remainingTime % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((remainingTime % (1000 * 60)) / 1000);
+            autosaveTimerDisplay.textContent = `${d}d ${h}h ${m}m ${s}s`;
+        }
+
+        function formatDateTime() {
+            return new Date().toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
+        }
+
+        async function backupData(isAuto = false) {
+            if (!db) {
+                if (!isAuto) showNotification('La base de datos no está lista.');
+                return;
+            }
+            db.transaction(['eventos'], 'readonly').objectStore('eventos').getAll().onsuccess = (e) => {
+                const data = {
+                    events: e.target.result
+                };
+                const jsonString = JSON.stringify(data, null, 2);
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `pagos_respaldo_${formatDateTime()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                localStorage.setItem('lastBackupTimestamp', Date.now().toString());
+                if (!isAuto) showNotification('Respaldo completado exitosamente.');
+            };
+        }
+        
+        backupBtn.addEventListener('click', () => backupData(false));
+
+        const restoreInput = document.getElementById('restore-input');
+        if (restoreInput) {
+            restoreInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        const eventsToRestore = data.events || (Array.isArray(data) ? data : []);
+                        if (!Array.isArray(eventsToRestore)) throw new Error("Formato de eventos no válido.");
+
+                        const transaction = db.transaction(['eventos'], 'readwrite');
+                        const store = transaction.objectStore('eventos');
+                        store.clear(); 
+                        eventsToRestore.forEach(item => { if (item.id) delete item.id; store.add(item); });
+
+                        transaction.oncomplete = () => {
+                            showNotification('Restauración completada. La página se recargará.');
+                            setTimeout(() => window.location.reload(), 2000);
+                        };
+                    } catch (error) {
+                        showNotification(`Error al procesar el archivo: ${error.message}`);
+                    }
+                };
+                reader.readAsText(file);
+                restoreInput.value = ''; 
+            });
+        }
+
+        // ==========================================
+        // LÓGICA DE RECONOCIMIENTOS
+        // ==========================================
+        
+        let allRecsCache = [];
+        let recDeleteStep = 1;
+        let recIdToDelete = null;
+
+        const recForm = document.getElementById('rec-form');
+        const recFormCancelBtn = document.getElementById('rec-form-cancel-btn');
+        const nuevoRecBtn = document.getElementById('nuevo-rec-btn');
+        const reconocimientosList = document.getElementById('reconocimientos-list');
+        const searchRecInput = document.getElementById('search-rec');
+        
+        const recDeleteModal = document.getElementById('rec-delete-modal');
+        const recDeleteConfirmBtn = document.getElementById('rec-delete-confirm-btn');
+        const recDeleteCancelBtn = document.getElementById('rec-delete-cancel-btn');
+        const recDeleteTitle = document.getElementById('rec-delete-title');
+        const recDeleteMessage = document.getElementById('rec-delete-message');
+
+        const tarjetaRecModal = document.getElementById('tarjeta-rec-modal');
+        const tarjetaRecCloseBtn = document.getElementById('tarjeta-rec-close-btn');
+        const tarjetaRecRenderArea = document.getElementById('tarjeta-rec-render-area');
+        const tarjetaRecDownloadBtn = document.getElementById('tarjeta-rec-download-btn');
+        const previewRecBtn = document.getElementById('preview-rec-btn');
+        const exportRecBtn = document.getElementById('export-rec-btn');
+        const importRecInput = document.getElementById('import-rec-input');
+
+        // Formato para mostrar la moneda
+        function formatRecCurrency(amount) {
+            return `₡${parseFloat(amount).toLocaleString('es-CR')}`;
+        }
+
+        function loadReconocimientos(searchTerm = '') {
+            const store = db.transaction(['reconocimientos'], 'readonly').objectStore('reconocimientos');
+            store.getAll().onsuccess = (e) => {
+                allRecsCache = e.target.result;
+                renderReconocimientos(searchTerm);
+            };
+        }
+
+        function renderReconocimientos(searchTerm = '') {
+            reconocimientosList.innerHTML = '';
+            
+            let filteredRecs = allRecsCache;
+            if (searchTerm) {
+                const term = searchTerm.toLowerCase();
+                filteredRecs = allRecsCache.filter(r => 
+                    r.nombre.toLowerCase().includes(term) ||
+                    r.provincia.toLowerCase().includes(term)
+                );
+            }
+
+            if (filteredRecs.length === 0) {
+                reconocimientosList.innerHTML = '<p style="text-align:center; color: var(--color-texto);">No hay reconocimientos registrados.</p>';
+                return;
+            }
+
+            // Agrupar por provincia
+            const grouped = filteredRecs.reduce((acc, rec) => {
+                if (!acc[rec.provincia]) acc[rec.provincia] = [];
+                acc[rec.provincia].push(rec);
+                return acc;
+            }, {});
+
+            // Orden de provincias sugerido
+            const provinciasOrder = ['San José', 'Alajuela', 'Cartago', 'Heredia', 'Guanacaste', 'Puntarenas', 'Limón'];
+            const sortedProvinces = Object.keys(grouped).sort((a, b) => {
+                let indexA = provinciasOrder.indexOf(a);
+                let indexB = provinciasOrder.indexOf(b);
+                if(indexA === -1) indexA = 999;
+                if(indexB === -1) indexB = 999;
+                return indexA - indexB;
+            });
+
+            sortedProvinces.forEach(prov => {
+                const groupDiv = document.createElement('div');
+                groupDiv.className = 'provincia-group';
+                
+                const title = document.createElement('div');
+                title.className = 'provincia-title';
+                title.textContent = prov;
+                
+                const listContainer = document.createElement('div');
+                listContainer.className = 'rec-list-container';
+
+                grouped[prov].forEach(rec => {
+                    const card = document.createElement('div');
+                    card.className = 'rec-card';
+                    card.innerHTML = `
+                        <div class="rec-header">
+                            <h4 class="rec-title">${rec.nombre}</h4>
+                            <div class="rec-actions">
+                                <button class="btn btn-secondary btn-edit-rec" data-id="${rec.id}" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Editar</button>
+                                <button class="btn btn-error btn-delete-rec" data-id="${rec.id}" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">Eliminar</button>
+                            </div>
+                        </div>
+                        ${rec.notas ? `<div class="rec-nota">Nota: ${rec.notas}</div>` : ''}
+                    `;
+                    listContainer.appendChild(card);
+                });
+
+                groupDiv.appendChild(title);
+                groupDiv.appendChild(listContainer);
+                reconocimientosList.appendChild(groupDiv);
+            });
+
+            // Listeners de editar y eliminar
+            document.querySelectorAll('.btn-edit-rec').forEach(btn => {
+                btn.addEventListener('click', () => openRecForm(Number(btn.dataset.id)));
+            });
+            document.querySelectorAll('.btn-delete-rec').forEach(btn => {
+                btn.addEventListener('click', () => initiateDeleteRec(Number(btn.dataset.id)));
+            });
+        }
+
+        searchRecInput.addEventListener('input', (e) => loadReconocimientos(e.target.value));
+
+        // Gestión del Formulario Inline
+        nuevoRecBtn.addEventListener('click', () => openRecForm());
+
+        function openRecForm(id = null) {
+            recForm.reset();
+            document.getElementById('rec-id').value = '';
+            document.getElementById('rec-form-title').textContent = 'Registrar Reconocimiento';
+            
+            if (id) {
+                const rec = allRecsCache.find(r => r.id === id);
+                if (rec) {
+                    document.getElementById('rec-form-title').textContent = 'Editar Reconocimiento';
+                    document.getElementById('rec-id').value = rec.id;
+                    document.getElementById('rec-nombre').value = rec.nombre;
+                    document.getElementById('rec-provincia').value = rec.provincia;
+                    document.getElementById('rec-notas').value = rec.notas;
+                    
+                    // Hacer scroll suave hacia el formulario para que el usuario vea que se cargaron los datos
+                    document.getElementById('rec-form-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            } else {
+                // Enfocar el primer input al limpiar
+                document.getElementById('rec-nombre').focus();
+            }
+        }
+
+        recFormCancelBtn.addEventListener('click', () => {
+            openRecForm(); // Limpiar el formulario
+        });
+
+        recForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const id = document.getElementById('rec-id').value;
+            const recData = {
+                nombre: document.getElementById('rec-nombre').value.trim(),
+                provincia: document.getElementById('rec-provincia').value,
+                notas: document.getElementById('rec-notas').value.trim()
+            };
+
+            const transaction = db.transaction(['reconocimientos'], 'readwrite');
+            const store = transaction.objectStore('reconocimientos');
+
+            if (id) {
+                recData.id = Number(id);
+                store.put(recData);
+            } else {
+                store.add(recData);
+            }
+
+            transaction.oncomplete = () => {
+                showNotification(id ? 'Reconocimiento actualizado.' : 'Reconocimiento registrado exitosamente.');
+                openRecForm(); // Limpiar el formulario automáticamente
+                loadReconocimientos(searchRecInput.value.trim());
+            };
+        });
+
+        // Proceso de Eliminación 3 Pasos
+        function initiateDeleteRec(id) {
+            recIdToDelete = id;
+            recDeleteStep = 1;
+            updateDeleteRecModal();
+            recDeleteModal.classList.add('visible');
+        }
+
+        function updateDeleteRecModal() {
+            if (recDeleteStep === 1) {
+                recDeleteTitle.textContent = 'Paso 1/3: Confirmar';
+                recDeleteMessage.textContent = '¿Estás seguro de que deseas eliminar este reconocimiento?';
+                recDeleteConfirmBtn.textContent = 'Confirmar';
+                recDeleteConfirmBtn.className = 'modal-btn btn-confirm';
+            } else if (recDeleteStep === 2) {
+                recDeleteTitle.textContent = 'Paso 2/3: Advertencia';
+                recDeleteMessage.textContent = 'Esta acción borrará los datos permanentemente. ¿Deseas continuar?';
+                recDeleteConfirmBtn.textContent = 'Sí, continuar';
+                recDeleteConfirmBtn.className = 'modal-btn btn-confirm';
+            } else if (recDeleteStep === 3) {
+                recDeleteTitle.textContent = 'Paso 3/3: Última Oportunidad';
+                recDeleteMessage.textContent = '¿Eliminar definitivamente el registro?';
+                recDeleteConfirmBtn.textContent = 'Eliminar';
+                recDeleteConfirmBtn.className = 'modal-btn btn-confirm';
+            }
+        }
+
+        recDeleteConfirmBtn.addEventListener('click', () => {
+            if (recDeleteStep < 3) {
+                recDeleteStep++;
+                updateDeleteRecModal();
+            } else {
+                const transaction = db.transaction(['reconocimientos'], 'readwrite');
+                transaction.objectStore('reconocimientos').delete(recIdToDelete).onsuccess = () => {
+                    recDeleteModal.classList.remove('visible');
+                    showNotification('Reconocimiento eliminado definitivamente.');
+                    loadReconocimientos(searchRecInput.value.trim());
+                };
+            }
+        });
+
+        recDeleteCancelBtn.addEventListener('click', () => recDeleteModal.classList.remove('visible'));
+
+        // Exportar e Importar JSON (Reconocimientos)
+        exportRecBtn.addEventListener('click', () => {
+            if (allRecsCache.length === 0) {
+                showNotification('No hay reconocimientos para exportar.');
+                return;
+            }
+            const dataStr = JSON.stringify(allRecsCache, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `reconocimientos_jyk_${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+
+        importRecInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    if (!Array.isArray(data)) throw new Error("Formato inválido.");
+                    const transaction = db.transaction(['reconocimientos'], 'readwrite');
+                    const store = transaction.objectStore('reconocimientos');
+                    data.forEach(item => {
+                        if (item.id) delete item.id;
+                        store.add(item);
+                    });
+                    transaction.oncomplete = () => {
+                        showNotification('Reconocimientos importados con éxito.');
+                        loadReconocimientos();
+                    };
+                } catch (error) {
+                    showNotification('Error al importar JSON.');
+                }
+            };
+            reader.readAsText(file);
+            importRecInput.value = '';
+        });
+
+        // Tarjeta PNG Reconocimientos
+        previewRecBtn.addEventListener('click', () => {
+            if (allRecsCache.length === 0) {
+                showNotification('No hay reconocimientos para generar la tarjeta.');
+                return;
+            }
+
+            const grouped = allRecsCache.reduce((acc, rec) => {
+                if (!acc[rec.provincia]) acc[rec.provincia] = [];
+                acc[rec.provincia].push(rec);
+                return acc;
+            }, {});
+
+            let listHTML = '';
+
+            const provinciasOrder = ['San José', 'Alajuela', 'Cartago', 'Heredia', 'Guanacaste', 'Puntarenas', 'Limón'];
+            const sortedProvinces = Object.keys(grouped).sort((a, b) => {
+                let indexA = provinciasOrder.indexOf(a);
+                let indexB = provinciasOrder.indexOf(b);
+                if(indexA === -1) indexA = 999;
+                if(indexB === -1) indexB = 999;
+                return indexA - indexB;
+            });
+
+            sortedProvinces.forEach(prov => {
+                listHTML += `<div style="margin-bottom: 20px;">
+                                <h3 style="color: var(--color-primario); margin: 0 0 10px 0; border-bottom: 2px solid var(--color-secundario); padding-bottom: 5px; font-size: 1.2rem;">${prov}</h3>
+                                <div style="display: flex; flex-direction: column; gap: 10px;">`;
+                grouped[prov].forEach((rec, index) => {
+                    listHTML += `<div>
+                                    <div style="font-size: 1rem; font-weight: bold; color: var(--color-texto);">${rec.nombre}</div>
+                                    ${rec.notas ? `<div style="font-size: 0.85rem; opacity: 0.8; margin-top: 4px; font-style: italic;">${rec.notas}</div>` : ''}
+                                 </div>`;
+                    
+                    // Separador <hr> para los elementos que no sean el último de la provincia
+                    if (index < grouped[prov].length - 1) {
+                        listHTML += `<hr style="border: none; border-top: 1px dashed var(--color-secundario); margin: 0;">`;
+                    }
+                });
+                listHTML += `</div></div>`;
+            });
+
+            const cardHTML = `
+                <div id="exportable-rec-card" style="background-color: var(--color-blanco); color: var(--color-texto); width: 100%; max-width: 450px; padding: 30px; border-radius: 16px; border: 2px solid var(--color-primario); font-family: sans-serif; box-sizing: border-box; position: relative; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                    <div style="position: absolute; top: -30px; left: -30px; width: 120px; height: 120px; background-color: var(--color-primario); opacity: 0.15; border-radius: 50%;"></div>
+                    <div style="position: absolute; bottom: -40px; right: -40px; width: 160px; height: 160px; background-color: var(--color-acento); opacity: 0.15; border-radius: 50%;"></div>
+                    
+                    <div style="position: relative; z-index: 2;">
+                        <h2 style="text-align: center; color: var(--color-primario); margin: 0 0 5px 0; font-size: 1.6rem; text-transform: uppercase;">Reconocimientos</h2>
+                        <p style="text-align: center; margin: 0 0 25px 0; font-size: 0.9rem; opacity: 0.8;">Gestión de Pagos JyK</p>
+                        
+                        <div style="margin-bottom: 20px;">
+                            ${listHTML}
+                        </div>
+
+                        <div style="text-align: center; margin-top: 30px; font-size: 0.75rem; opacity: 0.6; border-top: 1px solid var(--color-secundario); padding-top: 15px;">
+                            Generado el ${new Date().toLocaleDateString('es-CR')}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            tarjetaRecRenderArea.innerHTML = cardHTML;
+            tarjetaRecModal.classList.add('visible');
+        });
+
+        tarjetaRecCloseBtn.addEventListener('click', () => {
+            tarjetaRecModal.classList.remove('visible');
+        });
+
+        tarjetaRecDownloadBtn.addEventListener('click', () => {
+            const cardElement = document.getElementById('exportable-rec-card');
+            if (!cardElement) return;
+            
+            html2canvas(cardElement, {
+                scale: 2, 
+                useCORS: true,
+                backgroundColor: null 
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `tarjeta_reconocimientos_${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                showNotification('Tarjeta exportada exitosamente');
+            }).catch(error => {
+                console.error('Error al exportar la tarjeta:', error);
+                showNotification('Hubo un error al exportar la tarjeta. Inténtalo de nuevo.');
+            });
+        });
+
+        // Llamamos a initializeApp al final de todas las definiciones
+        initializeApp();
+        
+    });
+    </script>
+</body>
+</html>

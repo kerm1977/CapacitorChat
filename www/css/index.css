@@ -1,79 +1,102 @@
 .pt-safe { padding-top: env(safe-area-inset-top); }
-    .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+
+#app-content { 
+    transition: opacity 0.15s ease-out; 
+    padding-bottom: 0px; 
+}
+.fade-out { opacity: 0; }
+
+/* Espaciado dinámico para que la Navbar inferior no tape el contenido */
+.nav-padding {
+    padding-bottom: 85px !important; 
+}
+
+.bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+    background: white;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+    z-index: 1000;
+}
+
+/* Botones globales de Atrás y Cerrar Sesión (Capa extrema superior) */
+.global-floating-btn {
+    position: fixed;
+    /* Bajamos el botón 25px (de 20px a 45px) */
+    top: max(env(safe-area-inset-top, 45px), 45px);
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    z-index: 999999 !important;
+    border: 1px solid rgba(0,0,0,0.1);
+    backdrop-filter: blur(5px);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.global-floating-btn:active {
+    transform: scale(0.9);
+}
+
+#global-back-btn { left: 15px; }
+#global-logout-btn { right: 15px; }
+
+/* Ocultar elementos globalmente de manera forzada cuando sea necesario */
+.hidden-forced { display: none !important; }
+
+/* Estilos para el botón de Pin (Fijar en barra) */
+.btn-pin {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    color: #6c757d;
+}
+.btn-pin.active {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+}
+
+/* ESTILOS DEL BOTÓN FLOTANTE DE CHAT */
+#chat-flotante-btn {
+    display: none !important; /* Lo ocultamos para usar el acceso directo */
+}
+
+/* ========================================================= */
+/* NUEVOS ESTILOS: SALA DE CHAT COMO "HOJA" INDEPENDIENTE    */
+/* ========================================================= */
+.chat-hoja-nueva {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #f0f2f5;
+    z-index: 9999999; /* Por encima de todo (modales, navbars, etc) */
+    display: flex !important;
+    flex-direction: column;
     
-    #app-content { 
-        transition: opacity 0.15s ease-out; 
-        padding-bottom: 0px; 
-    }
-    .fade-out { opacity: 0; }
-    
-    /* Espaciado dinámico para que la Navbar inferior no tape el contenido */
-    .nav-padding {
-        padding-bottom: 85px !important; 
-    }
-    
-    .bottom-nav {
-        padding-bottom: env(safe-area-inset-bottom);
-        background: white;
-        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-        z-index: 1000;
-    }
+    /* Animación de entrada tipo hoja de app nativa (desliza desde la derecha) */
+    transform: translateX(100%);
+    transition: transform 0.25s ease-out;
+    visibility: hidden;
+}
 
-    /* Botones globales de Atrás y Cerrar Sesión (Capa extrema superior) */
-    .global-floating-btn {
-        position: fixed;
-        top: max(env(safe-area-inset-top, 20px), 20px);
-        width: 45px;
-        height: 45px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.95);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        display: flex !important;
-        align-items: center;
-        justify-content: center;
-        z-index: 999999 !important; 
-        border: 1px solid rgba(0,0,0,0.1);
-        backdrop-filter: blur(5px);
-        transition: transform 0.2s ease, opacity 0.2s ease;
-    }
-    
-    .global-floating-btn:active {
-        transform: scale(0.9);
-    }
+.chat-hoja-nueva.activa {
+    transform: translateX(0);
+    visibility: visible;
+}
 
-    #global-back-btn { left: 15px; }
-    #global-logout-btn { right: 15px; }
+/* Ajustes internos de la hoja para que se vea como una App Nativa */
+.chat-hoja-nueva .modal-header {
+    padding-top: max(env(safe-area-inset-top, 15px), 15px) !important;
+    border-radius: 0 !important; /* Quita bordes redondeados del antiguo modal */
+}
 
-    /* Ocultar elementos globalmente de manera forzada cuando sea necesario */
-    .hidden-forced { display: none !important; }
-
-    /* Estilos para el botón de Pin (Fijar en barra) */
-    .btn-pin {
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
-        color: #6c757d;
-    }
-    .btn-pin.active {
-        background-color: #ffc107;
-        border-color: #ffc107;
-        color: #000;
-    }
-
-    /* ESTILOS DEL BOTÓN FLOTANTE DE CHAT */
-    #btn-chat-flotante {
-        position: fixed;
-        bottom: 90px;
-        left: 20px; /* Alineado a la izquierda para NO tapar el botón + de accesos */
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        z-index: 1000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        transition: transform 0.2s ease, opacity 0.2s ease;
-    }
-    #btn-chat-flotante:active {
-        transform: scale(0.9);
-    }
+/* Protege el área segura inferior (iPhone, barra de navegación en Android) */
+.chat-hoja-nueva .chat-input-container {
+    padding-bottom: max(env(safe-area-inset-bottom, 15px), 15px) !important;
+}

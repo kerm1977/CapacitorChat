@@ -7,127 +7,358 @@
     <meta name="theme-color" content="#ffffff">
     <title>La Tribu</title>
     
-    <!-- Archivo Central de Estilos (Aquí se cargan Bootstrap y los Iconos) -->
+    <!-- Estilos principales -->
     <link href="css/main.css" rel="stylesheet">
-  
+    <style>
+        #iframe-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 1050; background-color: #f8f9fa;
+        }
+        /* Punto de estado para la lista de contactos */
+        .status-dot {
+            width: 12px; height: 12px;
+            border-radius: 50%; display: inline-block;
+            border: 2px solid white;
+        }
+    </style>
 </head>
 
 <body class="bg-light m-0 p-0 overflow-hidden vh-100 d-flex flex-column">
 
-    <!-- BOTÓN GLOBAL DE VOLVER ATRÁS -->
+    <!-- BOTONES DE NAVEGACIÓN GLOBAL -->
     <button id="global-back-btn" class="global-floating-btn hidden-forced" onclick="history.back()">
         <i class="bi bi-arrow-left fs-4 text-dark"></i>
     </button>
 
+    <!-- VISTA DE INICIO -->
+    <div id="home-view" class="h-100 d-flex flex-column pb-safe w-100">
+        <!-- Cabecera Naranja -->
+        <div class="position-relative w-100 flex-shrink-0 p-4 shadow-sm" style="background: linear-gradient(135deg, #ffc107, #fd7e14); border-bottom-left-radius: 30px; border-bottom-right-radius: 30px;">
+            <h2 class="fw-bold text-dark mb-0 mt-3">La Tribu</h2>
+            
+            <!-- Identificación del usuario activo cuando está logueado -->
+            <div id="user-active-info" class="d-none mt-3" onclick="cerrarSesion()" style="cursor: pointer;">
+                <span class="badge bg-light text-dark border p-2 rounded-pill">
+                    <i class="bi bi-person-circle text-warning me-1"></i> Sesión: <span id="info-usuario-actual"></span>
+                </span>
+            </div>
+        </div>
 
-    <!-- BOTÓN GLOBAL DE CERRAR SESIÓN (Oculto permanentemente para no romper el JS) -->
-    <button id="global-logout-btn" style="display: none !important;" onclick="cerrarSesion()">
-        <i class="bi bi-box-arrow-right fs-4 text-danger"></i>
-    </button>
+        <!-- Cuerpo con Accesos Directos -->
+        <div class="flex-grow-1 p-4 overflow-auto">
+            <div class="row g-3">
+                <div class="col-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100 bg-white" onclick="abrirHerramienta('instrucciones-1(1).html')">
+                        <div class="card-body text-center p-4 d-flex flex-column justify-content-center align-items-center">
+                            <i class="bi bi-journal-text text-warning mb-3" style="font-size: 3rem;"></i>
+                            <h6 class="text-dark fw-bold mb-0">Instrucciones</h6>
+                        </div>
+                    </div>
+                </div>
 
-    <!-- Botón Flotante para Agregar Nuevo Acceso (Solo visible en Home) -->
-    <button id="fab-add-acceso" class="btn btn-primary rounded-circle position-fixed shadow hidden-forced" 
-            style="bottom: 90px; right: 20px; z-index: 1000; width: 60px; height: 60px;"
-            data-bs-toggle="modal" data-bs-target="#modalNuevoAcceso">
-        <i class="bi bi-plus text-white" style="font-size: 2rem; line-height: 1;"></i>
-    </button>
+                <div class="col-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100 bg-white" onclick="abrirHerramienta('tablapagosV1 (2)-1(1).html')">
+                        <div class="card-body text-center p-4 d-flex flex-column justify-content-center align-items-center">
+                            <i class="bi bi-cash-coin text-warning mb-3" style="font-size: 3rem;"></i>
+                            <h6 class="text-dark fw-bold mb-0">Pagos JyK</h6>
+                        </div>
+                    </div>
+                </div>
 
-    <!-- Botón Flotante para el Chat -->
-    <button id="btn-chat-flotante" class="btn btn-warning rounded-circle hidden-forced" onclick="window.abrirModalChat()">
-        <i class="bi bi-chat-dots-fill text-dark" style="font-size: 1.8rem;"></i>
-        <!-- Globo de notificación (Punto rojo) -->
-        <span id="chat-badge" class="position-absolute top-0 start-100 translate-middle p-2 bg-danger border border-light rounded-circle d-none">
-            <span class="visually-hidden">Nuevos mensajes</span>
-        </span>
-    </button>
+                <!-- NUEVA TARJETA: CHAT DE LA TRIBU -->
+                <div class="col-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100 bg-white position-relative" onclick="abrirChatGlobal()" style="cursor: pointer;">
+                        <!-- Notificación de mensajes no leídos ajustada a la tarjeta -->
+                        <span id="chat-badge" class="position-absolute top-0 end-0 translate-middle p-2 bg-danger text-white border border-light rounded-circle d-none" style="font-size: 0.75rem; font-weight: bold; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; z-index: 10;"></span>
+                        
+                        <div class="card-body text-center p-4 d-flex flex-column justify-content-center align-items-center">
+                            <i class="bi bi-chat-dots-fill text-warning mb-3" style="font-size: 3rem;"></i>
+                            <h6 class="text-dark fw-bold mb-0">Chat</h6>
+                        </div>
+                    </div>
+                </div>
 
-    <!-- Contenedor Principal Dinámico (SPA) -->
-    <main id="app-content" class="flex-grow-1 overflow-auto h-100 w-100 position-relative">
-        <!-- El contenido de las vistas HTML se inyectará aquí -->
-    </main>
+            </div>
+        </div>
+    </div>
 
-    <!-- Barra de Navegación Inferior (Ahora es dinámica) -->
-    <nav id="bottom-navigation" class="bottom-nav hidden-forced position-fixed bottom-0 w-100 d-flex justify-content-around align-items-center py-2">
-        <!-- Se genera desde JavaScript mediante renderNavBar() -->
-    </nav>
+    <!-- CONTENEDOR PARA APLICACIONES EXTERNAS (IFRAME) -->
+    <div id="iframe-container" class="d-none">
+        <iframe id="app-iframe" src="" class="w-100 h-100 border-0"></iframe>
+    </div>
 
-    <!-- ================================================================= -->
-    <!-- MODAL DE ACCESOS DIRECTOS -->
-    <!-- ================================================================= -->
-    <div class="modal fade" id="modalNuevoAcceso" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow rounded-4">
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold">Nuevo Acceso Directo</h5>
+    <!-- MODAL DE INICIO DE SESIÓN / REGISTRO -->
+    <div class="modal fade" id="modalCrearUsuario" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered px-3">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header bg-warning border-0 pb-3 pt-4 px-4 d-flex justify-content-between align-items-center">
+                    <h5 class="modal-title fw-bold text-dark w-100 text-center mb-0">Acceso a La Tribu</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <form id="form-nuevo-acceso">
-                        <div class="mb-3">
-                            <label class="form-label text-secondary small">Nombre de la Vista</label>
-                            <input type="text" class="form-control rounded-3" id="acc-nombre" placeholder="Ej. Finanzas Personales" required>
+                <div class="modal-body px-4 py-4 bg-light">
+                    <form id="form-crear-usuario" onsubmit="procesarCreacionUsuario(event)">
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control rounded-3 border-0 shadow-sm" id="tempNombre" placeholder="Nombre" required>
+                            <label for="tempNombre"><i class="bi bi-person-fill me-2 text-warning"></i>Usuario / Correo</label>
                         </div>
-                        
-                        <!-- Carga de archivo HTML local -->
-                        <div class="mb-3 p-3 bg-light rounded-3 border">
-                            <label class="form-label text-primary fw-bold small mb-1"><i class="bi bi-cloud-upload"></i> Subir Archivo HTML (Opcional)</label>
-                            <input type="file" class="form-control form-control-sm rounded-2" id="acc-file" accept=".html">
-                            <div class="form-text" style="font-size: 0.75rem;">Si subes un archivo desde tu dispositivo, se guardará en la memoria interna de la app automáticamente.</div>
+                        <div class="form-floating mb-3 position-relative">
+                            <input type="password" class="form-control rounded-3 border-0 shadow-sm pe-5" id="tempPass" placeholder="Contraseña" pattern="[a-zA-Z0-9]{8,50}" maxlength="50" required>
+                            <label for="tempPass"><i class="bi bi-lock-fill me-2 text-warning"></i>Contraseña</label>
+                            <button type="button" class="btn border-0 position-absolute top-50 end-0 translate-middle-y me-1" onclick="togglePass('tempPass', 'ojoPass1')" style="z-index: 10;">
+                                <i id="ojoPass1" class="bi bi-eye-fill fs-5 text-secondary"></i>
+                            </button>
                         </div>
-
-                        <div class="mb-3">
-                            <label class="form-label text-secondary small">Ruta Manual (Si el archivo ya existe en www/)</label>
-                            <input type="text" class="form-control rounded-3" id="acc-ruta" placeholder="Ej. inventario">
+                        <div id="divConfirmPass" class="form-floating mb-3 position-relative d-none">
+                            <input type="password" class="form-control rounded-3 border-0 shadow-sm pe-5" id="tempPassConfirm" placeholder="Confirmar" maxlength="50">
+                            <label for="tempPassConfirm"><i class="bi bi-shield-lock-fill me-2 text-warning"></i>Confirmar Contraseña</label>
+                            <button type="button" class="btn border-0 position-absolute top-50 end-0 translate-middle-y me-1" onclick="togglePass('tempPassConfirm', 'ojoPass2')" style="z-index: 10;">
+                                <i id="ojoPass2" class="bi bi-eye-fill fs-5 text-secondary"></i>
+                            </button>
                         </div>
-
-                        <div class="mb-3">
-                            <label class="form-label text-secondary small">Icono</label>
-                            <select class="form-select rounded-3" id="acc-icono">
-                                <option value="bi-star-fill">Estrella</option>
-                                <option value="bi-box-seam">Caja / Inventario</option>
-                                <option value="bi-file-earmark-text">Documento</option>
-                                <option value="bi-camera-fill">Cámara / Fotos</option>
-                                <option value="bi-heart-fill">Corazón</option>
-                                <option value="bi-lightning-fill">Rayo</option>
-                                <option value="bi-gear-fill">Engranaje / Ajustes</option>
-                                <option value="bi-graph-up-arrow">Gráfica / Finanzas</option>
-                            </select>
+                        <button type="submit" class="btn btn-warning w-100 rounded-pill py-3 fw-bold shadow-sm d-flex justify-content-center align-items-center mb-3" id="btnCrearTemp">
+                            <span id="btnCrearTempText" class="text-dark">Iniciar Sesión</span>
+                            <div class="spinner-border spinner-border-sm text-dark ms-2 d-none" role="status" id="btnCrearTempSpinner"></div>
+                        </button>
+                        <div class="text-center">
+                            <a href="#" id="linkModoRegistro" class="text-decoration-none text-muted small" onclick="toggleModoRegistro(event)">
+                                ¿No tienes cuenta? <span class="text-warning fw-bold">Registrarme</span>
+                            </a>
                         </div>
-
-                        <div class="form-check form-switch mb-4">
-                            <input class="form-check-input" type="checkbox" id="acc-enbarra">
-                            <label class="form-check-label text-secondary small" for="acc-enbarra">Fijar en barra de navegación inferior (Máx 3)</label>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary w-100 rounded-3 py-2 fw-bold">Guardar Acceso</button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
 
-    
+    <!-- MODALES DE UI (Alertas y Confirmación) -->
+    <div class="modal fade" id="modalAlerta" tabindex="-1" aria-hidden="true" style="z-index: 1000000;">
+        <div class="modal-dialog modal-dialog-centered px-4">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-body text-center p-4">
+                    <i id="alertaIcono" class="bi bi-info-circle-fill text-warning mb-3" style="font-size: 4rem;"></i>
+                    <h5 class="fw-bold text-dark" id="alertaTitulo">Aviso</h5>
+                    <p class="text-muted mt-2 mb-4" id="alertaMensaje"></p>
+                    <button type="button" class="btn btn-warning rounded-pill w-100 fw-bold shadow-sm" data-bs-dismiss="modal">Aceptar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <div class="modal fade" id="modalConfirmacion" tabindex="-1" aria-hidden="true" style="z-index: 1000000;">
+        <div class="modal-dialog modal-dialog-centered px-4">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-body text-center p-4">
+                    <i class="bi bi-box-arrow-right text-danger mb-3" style="font-size: 4rem;"></i>
+                    <h5 class="fw-bold text-dark" id="confirmTitulo">Cerrar Sesión</h5>
+                    <p class="text-muted mt-2 mb-4" id="confirmMensaje">¿Estás seguro de que deseas salir?</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-light rounded-pill w-50 fw-bold border" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-danger rounded-pill w-50 fw-bold shadow-sm" id="btnConfirmAccion">Sí, Salir</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <!-- IMPORTAMOS EL MOTOR DE LA BD PARA TENER LA URL DINÁMICA -->
-    <script src="js/chatStyle.js"></script>
-    <script src="js/api_db.js"></script>
-    <script src="js/chat.js"></script> <!-- Integración del script de Chat -->
+    <!-- SCRIPT DE INICIALIZACIÓN -->
     <script src="js/bootstrap.js"></script>
-   
-    <!-- ================================================================= -->
-    <!-- SCRIPT DE ACTUALIZACIÓN OTA (Capgo / Capacitor Updater)           -->
-    <!-- ================================================================= -->
-    <script src="js/update.js"></script>
+    <script src="js/api_db.js"></script>
+    <script src="js/chatt.js"></script> 
+    
+    <script>
+        let esModoRegistro = false; 
 
-    <!-- ================================================================= -->
-    <!-- SCRIPT REGISTRO                                                   -->
-    <!-- ================================================================= -->
-    <script src="js/registro.js"></script>
-     <!-- ================================================================= -->
-    <!-- SCRIPT PERFIL                                                     -->
-    <!-- ================================================================== -->
-    <script src="js/perfil.js"></script>
+        document.addEventListener('DOMContentLoaded', () => {
+            actualizarVistaPrincipal();
+        });
 
+        // Cargar el HTML del chat
+        fetch('chat.html')
+            .then(res => res.text())
+            .then(html => { document.body.insertAdjacentHTML('beforeend', html); })
+            .catch(err => console.error("Error al cargar chat.html:", err));
+
+        // Gestiona la visibilidad de los elementos según la sesión
+        function actualizarVistaPrincipal() {
+            const uNombre = localStorage.getItem('tribu_nombre');
+            const userActiveInfo = document.getElementById('user-active-info');
+            
+            if(uNombre) {
+                document.getElementById('info-usuario-actual').textContent = uNombre;
+                userActiveInfo.classList.remove('d-none');
+                
+                if(window.ChatManager) window.ChatManager.iniciarPollingGlobal();
+            } else {
+                userActiveInfo.classList.add('d-none');
+                
+                if(window.ChatManager) window.ChatManager.detenerPollingGlobal();
+            }
+        }
+
+        // Funciones de utilidad para Modales Estéticos
+        function mostrarAlerta(mensaje, titulo = "Aviso", tipo = "warning", alCerrar = null) {
+            document.getElementById('alertaTitulo').textContent = titulo;
+            document.getElementById('alertaMensaje').textContent = mensaje;
+            const icono = document.getElementById('alertaIcono');
+            
+            if (tipo === 'error') icono.className = 'bi bi-x-circle-fill text-danger mb-3';
+            else if (tipo === 'success') icono.className = 'bi bi-check-circle-fill text-success mb-3';
+            else icono.className = 'bi bi-info-circle-fill text-warning mb-3';
+
+            const modalEl = document.getElementById('modalAlerta');
+            const modal = new bootstrap.Modal(modalEl);
+            if (alCerrar) {
+                modalEl.addEventListener('hidden.bs.modal', function onHide() {
+                    alCerrar();
+                    modalEl.removeEventListener('hidden.bs.modal', onHide);
+                });
+            }
+            modal.show();
+        }
+
+        function mostrarConfirmacion(mensaje, callback) {
+            document.getElementById('confirmMensaje').textContent = mensaje;
+            const btnAccion = document.getElementById('btnConfirmAccion');
+            const nuevoBtn = btnAccion.cloneNode(true);
+            btnAccion.parentNode.replaceChild(nuevoBtn, btnAccion);
+            
+            const modalEl = document.getElementById('modalConfirmacion');
+            const modal = new bootstrap.Modal(modalEl);
+            nuevoBtn.addEventListener('click', () => { modal.hide(); callback(); });
+            modal.show();
+        }
+
+        function abrirChatGlobal() {
+            if (!localStorage.getItem('tribu_nombre')) {
+                abrirModalCrearUsuario();
+                return;
+            }
+            if (typeof window.abrirModalChat === 'function') {
+                window.abrirModalChat();
+            }
+        }
+
+        function abrirHerramienta(url) {
+            document.getElementById('app-iframe').src = url;
+            document.getElementById('iframe-container').classList.remove('d-none');
+            document.getElementById('global-back-btn').classList.remove('hidden-forced');
+            history.pushState({ vistaAbierta: true }, "");
+        }
+
+        window.addEventListener('popstate', function(event) {
+            document.getElementById('iframe-container').classList.add('d-none');
+            setTimeout(() => { document.getElementById('app-iframe').src = ''; }, 200);
+            document.getElementById('global-back-btn').classList.add('hidden-forced');
+        });
+
+        // MEJORADO: Avisar al servidor para cambiar punto de verde a rojo inmediatamente
+        async function cerrarSesion() {
+            mostrarConfirmacion("¿Estás seguro de que deseas cerrar sesión?", async () => {
+                const uNombre = localStorage.getItem('tribu_nombre');
+                
+                // Avisamos al backend para que el estado pase a Offline inmediatamente
+                if(window.ChatManager && uNombre) {
+                    await window.ChatManager.llamarAPI('/logout_status', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ usuario: uNombre })
+                    });
+                }
+
+                localStorage.removeItem('tribu_nombre');
+                localStorage.removeItem('usuarioActual');
+                localStorage.removeItem('tribu_pin');
+                actualizarVistaPrincipal();
+            });
+        }
+
+        function abrirModalCrearUsuario() {
+            const modal = new bootstrap.Modal(document.getElementById('modalCrearUsuario'));
+            modal.show();
+        }
+
+        function toggleModoRegistro(event) {
+            if(event) event.preventDefault(); 
+            esModoRegistro = !esModoRegistro;
+            const divConfirm = document.getElementById('divConfirmPass');
+            const inputConfirm = document.getElementById('tempPassConfirm');
+            const btnText = document.getElementById('btnCrearTempText');
+            const linkText = document.getElementById('linkModoRegistro');
+
+            if (esModoRegistro) {
+                divConfirm.classList.remove('d-none');
+                inputConfirm.setAttribute('required', 'true');
+                btnText.textContent = 'Crear Cuenta';
+                linkText.innerHTML = '¿Ya tienes cuenta? <span class="text-warning fw-bold">Iniciar Sesión</span>';
+            } else {
+                divConfirm.classList.add('d-none');
+                inputConfirm.removeAttribute('required');
+                inputConfirm.value = ''; 
+                btnText.textContent = 'Iniciar Sesión';
+                linkText.innerHTML = '¿No tienes cuenta? <span class="text-warning fw-bold">Registrarme</span>';
+            }
+        }
+
+        function togglePass(inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+            if (input.type === 'password') {
+                input.type = 'text'; icon.className = 'bi bi-eye-slash-fill fs-5 text-warning';
+            } else {
+                input.type = 'password'; icon.className = 'bi bi-eye-fill fs-5 text-secondary';
+            }
+        }
+
+        async function procesarCreacionUsuario(event) {
+            event.preventDefault();
+            const nombre = document.getElementById('tempNombre').value.trim();
+            const pass1 = document.getElementById('tempPass').value.trim();
+            const pass2 = document.getElementById('tempPassConfirm').value.trim();
+            
+            const alfaNumericoRegex = /^[a-zA-Z0-9]{8,50}$/;
+            if (!alfaNumericoRegex.test(pass1)) {
+                mostrarAlerta('La contraseña debe tener entre 8 y 50 caracteres alfanuméricos.', 'Formato Inválido', 'error');
+                return;
+            }
+
+            if (esModoRegistro && pass1 !== pass2) {
+                mostrarAlerta('Las contraseñas no coinciden.', 'Error', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btnCrearTemp');
+            const text = document.getElementById('btnCrearTempText');
+            const spinner = document.getElementById('btnCrearTempSpinner');
+            btn.disabled = true; text.textContent = 'Procesando...'; spinner.classList.remove('d-none');
+            
+            try {
+                const apiUrl = typeof API_URL !== 'undefined' ? API_URL : 'https://kenth1977.pythonanywhere.com/api/tribuAPP';
+                const response = await fetch(`${apiUrl}/registro`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nombre: nombre, password: pass1 })
+                });
+
+                const result = await response.json();
+                if (!response.ok || result.error) throw new Error(result.error || 'Fallo en la autenticación.');
+
+                localStorage.setItem('usuarioActual', JSON.stringify({ nombre: nombre }));
+                localStorage.setItem('tribu_nombre', nombre);
+                
+                const modalInst = bootstrap.Modal.getInstance(document.getElementById('modalCrearUsuario'));
+                if (modalInst) modalInst.hide();
+                document.getElementById('form-crear-usuario').reset();
+
+                actualizarVistaPrincipal();
+                
+            } catch (error) {
+                mostrarAlerta(error.message, 'Error de Acceso', 'error');
+            } finally {
+                btn.disabled = false;
+                text.textContent = esModoRegistro ? 'Crear Cuenta' : 'Iniciar Sesión';
+                spinner.classList.add('d-none');
+            }
+        }
+    </script>
 </body>
 </html>
