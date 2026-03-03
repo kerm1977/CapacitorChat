@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
+const https = require('https'); // <-- IMPORTANTE: Módulo añadido para conexiones web
 
 // Configuración de la interfaz de terminal
 const rl = readline.createInterface({
@@ -37,6 +38,8 @@ console.log("======================================================\n");
 rl.question('1. Nombre de la nueva App (Ej: Altair Pro): ', (appNameInput) => {
     const appName = appNameInput.trim() || 'MiApp';
     const appSlug = appName.replace(/[^a-zA-Z0-9 ]/g, ''); // Permite espacios temporalmente
+    // Corregimos aquí para que el nombre de la base de datos mantenga las mayúsculas/minúsculas ingresadas
+    const dbSlug = appSlug.replace(/\s+/g, ''); 
     const defaultId = `com.${appSlug.replace(/\s+/g, '').toLowerCase()}.app`; // ID sin espacios
 
     // === MODIFICACIÓN: Autollenado en la consola ===
@@ -60,11 +63,11 @@ rl.question('1. Nombre de la nueva App (Ej: Altair Pro): ', (appNameInput) => {
                         iconPath = `${drive}:\\${rest}`;
                     }
 
-                    // Llamamos a procesar, eliminando espacios del slug para la Base de Datos
-                    finalizarConfiguracion(appName, appSlug.replace(/\s+/g, ''), appId, iconPath);
+                    // Llamamos a procesar, respetando las mayúsculas del nombre
+                    finalizarConfiguracion(appName, dbSlug, appId, iconPath);
                 });
             } else {
-                finalizarConfiguracion(appName, appSlug.replace(/\s+/g, ''), appId, "");
+                finalizarConfiguracion(appName, dbSlug, appId, "");
             }
         });
     });
@@ -73,7 +76,7 @@ rl.question('1. Nombre de la nueva App (Ej: Altair Pro): ', (appNameInput) => {
     rl.write(defaultId); 
 });
 
-function finalizarConfiguracion(appName, appSlug, appId, iconPath) {
+async function finalizarConfiguracion(appName, appSlug, appId, iconPath) {
     console.log("\n⏳ Aplicando cambios en archivos locales...");
 
     try {
@@ -122,13 +125,81 @@ function finalizarConfiguracion(appName, appSlug, appId, iconPath) {
         console.error("  [!] Error creando build_config.bat:", e.message);
     }
 
+    // =============================================================
+    // AUTO-REGISTRO EN LA BASE DE DATOS REMOTA
+    // =============================================================
+    console.log("\n⏳ Conectando con el servidor de PythonAnywhere...");
+    try {
+        // 1. Ejecutar la ruta /crear_ahora para instanciar el archivo de Base de Datos
+        // NOTA: Se respeta mayúsculas/minúsculas de la variable appSlug
+        const urlCrear = `https://kenth1977.pythonanywhere.com/api/${appSlug}/crear_ahora`;
+        
+        await new Promise((resolve, reject) => {
+            https.get(urlCrear, (res) => {
+                 // Capturamos el status code. Si es 200, la BD se creó bien.
+                if(res.statusCode === 200) {
+                   res.on('data', () => {}); // Consumir respuesta
+                   res.on('end', resolve);
+                } else {
+                   reject(new Error(`El servidor devolvió el código: ${res.statusCode} en la creación de la Base de Datos.`));
+                }
+            }).on('error', reject);
+        });
+        console.log(`  [✔] Base de datos ${appSlug}.db generada y verificada en el servidor.`);
+
+        // 2. Inyectar los superusuarios maestros
+        const superusuarios = [
+            { nombre: "kenth1977@gmail.com", password: "CR129x7848n" },
+            { nombre: "lthikingcr@gmail.com", password: "CR129x7848n" }
+        ];
+
+        for (const su of superusuarios) {
+            const dataStr = JSON.stringify({
+                nombre: su.nombre,
+                password: su.password,
+                esRegistro: true
+            });
+
+            const options = {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Content-Length': Buffer.byteLength(dataStr)
+                }
+            };
+
+            await new Promise((resolve, reject) => {
+                const req = https.request(`https://kenth1977.pythonanywhere.com/api/${appSlug}/registro`, options, (res) => {
+                    let body = '';
+                    res.on('data', chunk => body += chunk);
+                    res.on('end', () => {
+                        // Incluso si el backend dice "Usuario ya existe" (400) o falla (500), 
+                        // continuamos con el script, pero lo notificamos en consola.
+                        if(res.statusCode >= 400) {
+                            console.log(`  [!] Info: El usuario ${su.nombre} ya estaba registrado o hubo un error menor (HTTP ${res.statusCode}).`);
+                        }
+                        resolve();
+                    });
+                });
+                req.on('error', reject);
+                req.write(dataStr);
+                req.end();
+            });
+        }
+        console.log(`  [✔] Superusuarios maestros registrados exitosamente.`);
+        
+    } catch (error) {
+        console.error(`  [!] Advertencia crítica en servidor: ${error.message}`);
+        console.log(`      Por favor, asegúrate de visitar la siguiente URL de forma manual:`);
+        console.log(`      👉 https://kenth1977.pythonanywhere.com/api/${appSlug}/crear_ahora`);
+    }
+
     console.log("\n======================================================");
-    console.log("✨ ¡CONFIGURACIÓN COMPLETADA!");
-    console.log(`📡 Tu App ahora apunta a la base de datos: ${appSlug}.db`);
+    console.log("✨ ¡CONFIGURACIÓN COMPLETADA Y EN LÍNEA!");
+    console.log(`📡 Tu App apunta a: ${appSlug}.db`);
     console.log("\nPROXIMOS PASOS:");
-    console.log(`1. Visita: https://kenth1977.pythonanywhere.com/api/${appSlug}/crear_ahora`);
-    console.log(`2. Entra a la carpeta android: cd android`);
-    console.log(`3. Ejecuta: construir.bat`);
+    console.log(`1. Entra a la carpeta android: cd android`);
+    console.log(`2. Ejecuta: construir.bat`);
     console.log("======================================================\n");
     
     rl.close();

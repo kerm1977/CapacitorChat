@@ -178,6 +178,35 @@ def registro(app_slug):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# === NUEVA RUTA PARA OBTENER TODOS LOS USUARIOS ===
+@appt_bp.route('/api/<app_slug>/usuarios', methods=['GET', 'OPTIONS'])
+def obtener_usuarios(app_slug):
+    """Devuelve la lista de todos los usuarios registrados (Para el panel de Ajustes)"""
+    if request.method == 'OPTIONS':
+        return jsonify({"status": "ok"}), 200
+
+    try:
+        member_table = init_db(app_slug)
+        engine = get_engine(app_slug)
+        
+        with engine.connect() as conn:
+            # Seleccionamos a todos los usuarios (omitiendo contraseñas por seguridad)
+            usuarios = conn.execute(member_table.select()).fetchall()
+            
+            lista_usuarios = []
+            for u in usuarios:
+                lista_usuarios.append({
+                    "id": getattr(u, 'id', u[0]),
+                    "nombre": getattr(u, 'nombre', u[1]),
+                    "email": getattr(u, 'email', u[3]),
+                    "telefono": getattr(u, 'telefono', u[5]),
+                    "rol": getattr(u, 'rol', u[6])
+                })
+
+            return jsonify({"status": "ok", "usuarios": lista_usuarios}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @appt_bp.route('/api/<app_slug>/check_update', methods=['GET', 'OPTIONS'])
 def check_update(app_slug):

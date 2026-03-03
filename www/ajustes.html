@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Ajustes - La Tribu</title>
+    <!-- Estilos de Bootstrap y Bootstrap Icons desde CDN para la herramienta embebida -->
+    <link href="css/main.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f8f9fa; }
+        .cursor-pointer { cursor: pointer; }
+    </style>
+</head>
+<body class="p-3">
+
+    <div class="container-fluid p-0 pb-5">
+        
+        <!-- Cabecera de Ajustes -->
+        <h3 class="fw-bold mb-4 text-dark mt-2">
+            <i class="bi bi-gear-fill text-warning me-2"></i>Ajustes
+        </h3>
+
+        <!-- Botón / Tarjeta: Administrar Usuarios -->
+        <div class="card border-0 shadow-sm rounded-4 mb-4 cursor-pointer" onclick="cargarUsuarios()">
+            <div class="card-body p-4 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <div class="bg-light rounded-circle p-3 me-3 text-center d-flex align-items-center justify-content-center" style="width: 55px; height: 55px;">
+                        <i class="bi bi-people-fill fs-3 text-warning"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0 text-dark">Administrar Usuarios</h6>
+                        <small class="text-muted">Ver todos los miembros registrados</small>
+                    </div>
+                </div>
+                <i class="bi bi-chevron-down fs-5 text-secondary" id="icono-desplegable"></i>
+            </div>
+        </div>
+
+        <!-- Contenedor de la lista de usuarios (Oculto por defecto) -->
+        <div id="contenedor-usuarios" class="d-none">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold text-dark mb-0">Directorio de la Base de Datos</h6>
+                <span class="badge bg-warning text-dark rounded-pill shadow-sm" id="total-usuarios">0</span>
+            </div>
+            
+            <div id="lista-usuarios" class="list-group shadow-sm rounded-4 border-0">
+                <!-- Los usuarios se inyectarán aquí mediante JS -->
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Script de Lógica -->
+    <script>
+        let usuariosCargados = false;
+
+        async function cargarUsuarios() {
+            const contenedor = document.getElementById('contenedor-usuarios');
+            const lista = document.getElementById('lista-usuarios');
+            const total = document.getElementById('total-usuarios');
+            const icono = document.getElementById('icono-desplegable');
+
+            // Lógica para desplegar / ocultar si ya están cargados
+            if (usuariosCargados) {
+                contenedor.classList.toggle('d-none');
+                icono.classList.toggle('bi-chevron-down');
+                icono.classList.toggle('bi-chevron-up');
+                return;
+            }
+
+            // Mostrar estado de carga
+            contenedor.classList.remove('d-none');
+            icono.classList.replace('bi-chevron-down', 'bi-chevron-up');
+            lista.innerHTML = `
+                <div class="p-4 text-center bg-white rounded-4">
+                    <div class="spinner-border text-warning mb-2" role="status"></div>
+                    <p class="text-muted small mb-0">Consultando Base de Datos...</p>
+                </div>
+            `;
+
+            try {
+                // Buscamos la URL de la API inteligentemente para evitar problemas de mayúsculas
+                let apiUrl = 'https://kenth1977.pythonanywhere.com/api/TribuAPP'; 
+                try {
+                    // Intenta extraer la URL exacta definida en el archivo api_db.js del padre
+                    if (window.parent && typeof window.parent.eval === 'function') {
+                        const urlPadre = window.parent.eval('typeof API_URL !== "undefined" ? API_URL : null');
+                        if (urlPadre) apiUrl = urlPadre;
+                    }
+                } catch(e) {
+                    console.log("No se pudo extraer del padre, usando fallback:", apiUrl);
+                }
+
+                // Hacer la consulta al backend en PythonAnywhere
+                const response = await fetch(`${apiUrl}/usuarios`);
+                const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || 'Error al obtener usuarios de la base de datos.');
+                }
+
+                // Renderizar la lista
+                if (data.usuarios && data.usuarios.length > 0) {
+                    total.textContent = data.usuarios.length;
+                    lista.innerHTML = ''; 
+                    
+                    data.usuarios.forEach(u => {
+                        const esAdmin = u.rol === 'superadmin';
+                        const badgeAdmin = esAdmin ? '<span class="badge bg-danger ms-2" style="font-size: 0.65rem;">Admin</span>' : '';
+                        
+                        lista.innerHTML += `
+                            <div class="list-group-item p-3 border-light bg-white ${esAdmin ? 'bg-opacity-50 bg-light' : ''}">
+                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        <div class="bg-secondary bg-opacity-10 text-dark rounded-circle d-flex justify-content-center align-items-center fw-bold me-3" style="width: 40px; height: 40px; font-size: 1.1rem;">
+                                            ${u.nombre.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div>
+                                            <h6 class="mb-0 fw-bold text-dark d-flex align-items-center">${u.nombre} ${badgeAdmin}</h6>
+                                            <small class="text-muted"><i class="bi bi-envelope me-1"></i>${u.email || 'Sin correo'}</small>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="text-muted fw-bold">#${u.id}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    lista.innerHTML = '<div class="p-4 text-center bg-white rounded-4 text-muted small">La base de datos está vacía.</div>';
+                    total.textContent = '0';
+                }
+
+                usuariosCargados = true;
+
+            } catch (error) {
+                lista.innerHTML = `
+                    <div class="p-4 text-center bg-white rounded-4 text-danger">
+                        <i class="bi bi-exclamation-triangle-fill fs-3 mb-2"></i>
+                        <p class="small fw-bold mb-0">Fallo de conexión</p>
+                        <small class="text-muted">${error.message}</small>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
