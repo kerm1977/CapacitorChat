@@ -66,7 +66,7 @@
                     </div>
                 </div>
 
-                <!-- NUEVA TARJETA: CHAT DE LA TRIBU -->
+                <!-- TARJETA: CHAT DE LA TRIBU -->
                 <div class="col-6">
                     <div class="card border-0 shadow-sm rounded-4 h-100 bg-white position-relative" onclick="abrirChatGlobal()" style="cursor: pointer;">
                         <!-- Notificación de mensajes no leídos ajustada a la tarjeta -->
@@ -75,6 +75,16 @@
                         <div class="card-body text-center p-4 d-flex flex-column justify-content-center align-items-center">
                             <i class="bi bi-chat-dots-fill text-warning mb-3" style="font-size: 3rem;"></i>
                             <h6 class="text-dark fw-bold mb-0">Chat</h6>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TARJETA: AJUSTES (SOLO SUPERADMIN - OCULTA POR DEFECTO) -->
+                <div class="col-6 d-none" id="card-ajustes">
+                    <div class="card border-0 shadow-sm rounded-4 h-100 bg-white" onclick="abrirHerramienta('ajustes.html')" style="cursor: pointer;">
+                        <div class="card-body text-center p-4 d-flex flex-column justify-content-center align-items-center">
+                            <i class="bi bi-gear-fill text-warning mb-3" style="font-size: 3rem;"></i>
+                            <h6 class="text-dark fw-bold mb-0">Ajustes</h6>
                         </div>
                     </div>
                 </div>
@@ -182,15 +192,25 @@
         // Gestiona la visibilidad de los elementos según la sesión
         function actualizarVistaPrincipal() {
             const uNombre = localStorage.getItem('tribu_nombre');
+            const uRol = localStorage.getItem('tribu_rol'); // Obtenemos el rol
             const userActiveInfo = document.getElementById('user-active-info');
+            const cardAjustes = document.getElementById('card-ajustes');
             
             if(uNombre) {
                 document.getElementById('info-usuario-actual').textContent = uNombre;
                 userActiveInfo.classList.remove('d-none');
                 
+                // LÓGICA DE SUPERADMIN: Mostrar tarjeta de Ajustes
+                if (uRol === 'superadmin') {
+                    if(cardAjustes) cardAjustes.classList.remove('d-none');
+                } else {
+                    if(cardAjustes) cardAjustes.classList.add('d-none');
+                }
+                
                 if(window.ChatManager) window.ChatManager.iniciarPollingGlobal();
             } else {
                 userActiveInfo.classList.add('d-none');
+                if(cardAjustes) cardAjustes.classList.add('d-none'); // Ocultar siempre al salir
                 
                 if(window.ChatManager) window.ChatManager.detenerPollingGlobal();
             }
@@ -266,9 +286,12 @@
                     });
                 }
 
+                // Borramos todo de la memoria local
                 localStorage.removeItem('tribu_nombre');
                 localStorage.removeItem('usuarioActual');
                 localStorage.removeItem('tribu_pin');
+                localStorage.removeItem('tribu_rol'); // Limpiamos el rol de superadmin
+                
                 actualizarVistaPrincipal();
             });
         }
@@ -339,15 +362,21 @@
                     body: JSON.stringify({ 
                         nombre: nombre, 
                         password: pass1,
-                        esRegistro: esModoRegistro // <-- ¡ESTO LE AVISA AL SERVIDOR TU INTENCIÓN!
+                        esRegistro: esModoRegistro 
                     })
                 });
 
                 const result = await response.json();
                 if (!response.ok || result.error) throw new Error(result.error || 'Fallo en la autenticación.');
 
+                // Guardado en memoria
                 localStorage.setItem('usuarioActual', JSON.stringify({ nombre: nombre }));
                 localStorage.setItem('tribu_nombre', nombre);
+                
+                // GUARDAR EL ROL RECIBIDO DEL SERVIDOR
+                if (result.rol) {
+                    localStorage.setItem('tribu_rol', result.rol);
+                }
                 
                 const modalInst = bootstrap.Modal.getInstance(document.getElementById('modalCrearUsuario'));
                 if (modalInst) modalInst.hide();
