@@ -80,7 +80,7 @@ def crear_ahora(app_slug):
 
 @appt_bp.route('/api/<app_slug>/registro', methods=['POST', 'OPTIONS'])
 def registro(app_slug):
-    """Proceso de Login para la App T (La creación automática ha sido deshabilitada)"""
+    """Proceso inteligente: Login o Registro separados lógicamente"""
     if request.method == 'OPTIONS':
         return jsonify({"status": "ok"}), 200
 
@@ -90,12 +90,14 @@ def registro(app_slug):
 
     nombre = data.get('nombre')
     password = data.get('password')
+    es_registro = data.get('esRegistro', False) # <-- ¡NUEVO! Detectar si es registro
 
     if not nombre or not password:
         return jsonify({"error": "Nombre de usuario y contraseña son obligatorios"}), 400
 
     # Normalización de datos
     nombre_usuario = nombre.strip()
+    email_ficticio = f"{nombre_usuario.replace(' ', '').lower()}@temp.chat"
     
     # --- VALIDACIÓN DE SUPERUSUARIOS ---
     es_super = nombre_usuario.lower() in ['kenth1977@gmail.com', 'lthikingcr@gmail.com']
@@ -118,6 +120,9 @@ def registro(app_slug):
             ).fetchone()
             
             if usuario_existente:
+                if es_registro:
+                    return jsonify({"error": "Este usuario ya existe. Por favor, inicia sesión."}), 400
+
                 # ==========================================
                 # MODO LOGIN: El usuario ya existe
                 # ==========================================
@@ -144,11 +149,31 @@ def registro(app_slug):
                     return jsonify({"error": "El usuario ya existe, pero la contraseña es incorrecta."}), 401
             
             else:
-                # ==========================================
-                # MODO BARRERA: El usuario NO existe
-                # ==========================================
-                # Eliminamos la creación automática de usuarios. Si no existe, bloqueamos.
-                return jsonify({"error": "Acceso denegado: Este usuario NO está registrado."}), 404
+                # El usuario NO existe en la base de datos
+                if es_registro:
+                    # ==========================================
+                    # MODO REGISTRO LEGÍTIMO
+                    # ==========================================
+                    hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+                    
+                    conn.execute(member_table.insert().values(
+                        nombre=nombre_usuario,
+                        email=email_ficticio,
+                        password=hashed_password,
+                        rol=rol
+                    ))
+                    conn.commit()
+
+                    return jsonify({
+                        "status": "ok", 
+                        "mensaje": f"Usuario {nombre_usuario} registrado exitosamente.",
+                        "rol": rol
+                    })
+                else:
+                    # ==========================================
+                    # MODO BARRERA: Intentó loguearse pero no existe
+                    # ==========================================
+                    return jsonify({"error": "Acceso denegado: Este usuario NO está registrado."}), 404
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

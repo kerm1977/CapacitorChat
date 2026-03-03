@@ -259,7 +259,7 @@
                 
                 // Avisamos al backend para que el estado pase a Offline inmediatamente
                 if(window.ChatManager && uNombre) {
-                    await window.ChatManager.llamarAPI('/logout_status', {
+                    await window.ChatManager.llamarAPI('/logout', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ usuario: uNombre })
@@ -336,7 +336,11 @@
                 const apiUrl = typeof API_URL !== 'undefined' ? API_URL : 'https://kenth1977.pythonanywhere.com/api/tribuAPP';
                 const response = await fetch(`${apiUrl}/registro`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nombre: nombre, password: pass1 })
+                    body: JSON.stringify({ 
+                        nombre: nombre, 
+                        password: pass1,
+                        esRegistro: esModoRegistro // <-- ¡ESTO LE AVISA AL SERVIDOR TU INTENCIÓN!
+                    })
                 });
 
                 const result = await response.json();
