@@ -31,25 +31,18 @@
         <i class="bi bi-arrow-left fs-4 text-dark"></i>
     </button>
 
-    <button id="global-logout-btn" class="global-floating-btn hidden-forced" onclick="cerrarSesion()" style="top: 20px; right: 15px; z-index: 999999; background: #ffeaea; border-color: #ffc2c2;">
-        <i class="bi bi-box-arrow-right fs-4 text-danger"></i>
-    </button>
-
-    <!-- BOTÓN FLOTANTE DE CHAT -->
-    <button id="btn-chat-flotante" class="btn btn-warning rounded-circle position-fixed shadow d-flex align-items-center justify-content-center" 
-            style="bottom: 30px; right: 20px; width: 60px; height: 60px; z-index: 999998;" 
-            onclick="abrirChatGlobal()">
-        <i class="bi bi-chat-dots-fill fs-3 text-dark"></i>
-        <!-- Notificación de mensajes no leídos -->
-        <span id="chat-badge" class="position-absolute top-0 start-100 translate-middle p-2 bg-danger text-white border border-light rounded-circle d-none" style="font-size: 0.75rem; font-weight: bold; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;"></span>
-    </button>
-
     <!-- VISTA DE INICIO -->
     <div id="home-view" class="h-100 d-flex flex-column pb-safe w-100">
         <!-- Cabecera Naranja -->
         <div class="position-relative w-100 flex-shrink-0 p-4 shadow-sm" style="background: linear-gradient(135deg, #ffc107, #fd7e14); border-bottom-left-radius: 30px; border-bottom-right-radius: 30px;">
             <h2 class="fw-bold text-dark mb-0 mt-3">La Tribu</h2>
-            <p class="text-dark text-opacity-75 mb-0">Herramientas Operativas</p>
+            
+            <!-- Identificación del usuario activo cuando está logueado -->
+            <div id="user-active-info" class="d-none mt-3" onclick="cerrarSesion()" style="cursor: pointer;">
+                <span class="badge bg-light text-dark border p-2 rounded-pill">
+                    <i class="bi bi-person-circle text-warning me-1"></i> Sesión: <span id="info-usuario-actual"></span>
+                </span>
+            </div>
         </div>
 
         <!-- Cuerpo con Accesos Directos -->
@@ -73,24 +66,27 @@
                     </div>
                 </div>
 
-                <!-- TARJETA DE CUENTA (Sólo visible si no hay usuario) -->
-                <div id="login-card-container" class="col-12">
-                    <div class="card border-0 shadow-sm rounded-4 bg-white" onclick="abrirModalCrearUsuario()">
-                        <div class="card-body text-center p-3 d-flex flex-row align-items-center justify-content-center">
-                            <i class="bi bi-person-badge text-warning me-3" style="font-size: 2.5rem;"></i>
-                            <div class="text-start flex-grow-1">
-                                <h6 class="text-dark fw-bold mb-0">Cuenta de Usuario</h6>
-                                <small class="text-muted">Inicia sesión para usar el chat</small>
-                            </div>
+                <!-- TARJETA: CHAT DE LA TRIBU -->
+                <div class="col-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100 bg-white position-relative" onclick="abrirChatGlobal()" style="cursor: pointer;">
+                        <!-- Notificación de mensajes no leídos ajustada a la tarjeta -->
+                        <span id="chat-badge" class="position-absolute top-0 end-0 translate-middle p-2 bg-danger text-white border border-light rounded-circle d-none" style="font-size: 0.75rem; font-weight: bold; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; z-index: 10;"></span>
+                        
+                        <div class="card-body text-center p-4 d-flex flex-column justify-content-center align-items-center">
+                            <i class="bi bi-chat-dots-fill text-warning mb-3" style="font-size: 3rem;"></i>
+                            <h6 class="text-dark fw-bold mb-0">Chat</h6>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Identificación del usuario activo cuando está logueado -->
-                <div id="user-active-info" class="col-12 d-none text-center mt-2">
-                    <span class="badge bg-light text-dark border p-2 rounded-pill">
-                        <i class="bi bi-person-circle text-warning me-1"></i> Sesión: <span id="info-usuario-actual"></span>
-                    </span>
+
+                <!-- TARJETA: AJUSTES (SOLO SUPERADMIN - OCULTA POR DEFECTO) -->
+                <div class="col-6 d-none" id="card-ajustes">
+                    <div class="card border-0 shadow-sm rounded-4 h-100 bg-white" onclick="abrirHerramienta('ajustes.html')" style="cursor: pointer;">
+                        <div class="card-body text-center p-4 d-flex flex-column justify-content-center align-items-center">
+                            <i class="bi bi-gear-fill text-warning mb-3" style="font-size: 3rem;"></i>
+                            <h6 class="text-dark fw-bold mb-0">Ajustes</h6>
+                        </div>
+                    </div>
                 </div>
 
             </div>
@@ -196,21 +192,25 @@
         // Gestiona la visibilidad de los elementos según la sesión
         function actualizarVistaPrincipal() {
             const uNombre = localStorage.getItem('tribu_nombre');
-            const loginCard = document.getElementById('login-card-container');
+            const uRol = localStorage.getItem('tribu_rol'); // Obtenemos el rol
             const userActiveInfo = document.getElementById('user-active-info');
-            const logoutBtn = document.getElementById('global-logout-btn');
+            const cardAjustes = document.getElementById('card-ajustes');
             
             if(uNombre) {
                 document.getElementById('info-usuario-actual').textContent = uNombre;
-                loginCard.classList.add('d-none'); 
                 userActiveInfo.classList.remove('d-none');
-                logoutBtn.classList.remove('hidden-forced');
+                
+                // LÓGICA DE SUPERADMIN: Mostrar tarjeta de Ajustes
+                if (uRol === 'superadmin') {
+                    if(cardAjustes) cardAjustes.classList.remove('d-none');
+                } else {
+                    if(cardAjustes) cardAjustes.classList.add('d-none');
+                }
                 
                 if(window.ChatManager) window.ChatManager.iniciarPollingGlobal();
             } else {
-                loginCard.classList.remove('d-none'); 
                 userActiveInfo.classList.add('d-none');
-                logoutBtn.classList.add('hidden-forced');
+                if(cardAjustes) cardAjustes.classList.add('d-none'); // Ocultar siempre al salir
                 
                 if(window.ChatManager) window.ChatManager.detenerPollingGlobal();
             }
@@ -279,16 +279,19 @@
                 
                 // Avisamos al backend para que el estado pase a Offline inmediatamente
                 if(window.ChatManager && uNombre) {
-                    await window.ChatManager.llamarAPI('/logout_status', {
+                    await window.ChatManager.llamarAPI('/logout', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ usuario: uNombre })
                     });
                 }
 
+                // Borramos todo de la memoria local
                 localStorage.removeItem('tribu_nombre');
                 localStorage.removeItem('usuarioActual');
                 localStorage.removeItem('tribu_pin');
+                localStorage.removeItem('tribu_rol'); // Limpiamos el rol de superadmin
+                
                 actualizarVistaPrincipal();
             });
         }
@@ -356,14 +359,24 @@
                 const apiUrl = typeof API_URL !== 'undefined' ? API_URL : 'https://kenth1977.pythonanywhere.com/api/tribuAPP';
                 const response = await fetch(`${apiUrl}/registro`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ nombre: nombre, password: pass1 })
+                    body: JSON.stringify({ 
+                        nombre: nombre, 
+                        password: pass1,
+                        esRegistro: esModoRegistro 
+                    })
                 });
 
                 const result = await response.json();
                 if (!response.ok || result.error) throw new Error(result.error || 'Fallo en la autenticación.');
 
+                // Guardado en memoria
                 localStorage.setItem('usuarioActual', JSON.stringify({ nombre: nombre }));
                 localStorage.setItem('tribu_nombre', nombre);
+                
+                // GUARDAR EL ROL RECIBIDO DEL SERVIDOR
+                if (result.rol) {
+                    localStorage.setItem('tribu_rol', result.rol);
+                }
                 
                 const modalInst = bootstrap.Modal.getInstance(document.getElementById('modalCrearUsuario'));
                 if (modalInst) modalInst.hide();

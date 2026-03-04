@@ -1,24 +1,28 @@
+# ==============================================================================
+# ARCHIVO: tribu.py
+# ROL: EL PADRE (App Principal de "La Tribu")
+# DESCRIPCIÓN: Maneja los usuarios, login, registro y la creación de la DB SQLite.
+#              Registra a su hijo (chat.py) y es registrado por su abuelo (app.py).
+# ==============================================================================
+
 import os
 import logging
 from flask import Blueprint, request, jsonify, send_from_directory
 from flask_bcrypt import Bcrypt
-from sqlalchemy import create_engine, Column, Integer, String, MetaData, Table
+from sqlalchemy import create_engine, Column, Integer, String, MetaData, Table, text
 
 # ==========================================
 # 1. INICIALIZACIÓN DEL BLUEPRINT (PADRE)
 # ==========================================
-# Este módulo centraliza la lógica de "La Tribu" (App T)
-appt_bp = Blueprint('appt_api', __name__)
-
-# Instanciamos Bcrypt para el manejo seguro de contraseñas
+tribu_bp = Blueprint('tribu_api', __name__)
 bcrypt = Bcrypt()
 
 # ==========================================
-# 2. CONEXIÓN CON EL HIJO (CHATT)
+# 2. CONEXIÓN CON EL HIJO (chat.py)
 # ==========================================
-# Importamos el chat específico 'T' y lo registramos en este Blueprint
-from chatt import chatt_bp
-appt_bp.register_blueprint(chatt_bp)
+# Aquí el Padre importa y registra las rutas del Hijo (Chat)
+from chat import chatt_bp
+tribu_bp.register_blueprint(chatt_bp)
 
 # ==========================================
 # 3. CONFIGURACIÓN DE RUTAS Y DBs
@@ -31,19 +35,37 @@ db_engines = {}
 
 def get_engine(app_slug):
     """Obtiene o crea el motor SQLite para la base de datos solicitada"""
+    
+    # Asegurarnos de que el directorio físico exista siempre
+    if not os.path.exists(BASE_DB_PATH):
+        os.makedirs(BASE_DB_PATH, exist_ok=True)
+        
     if app_slug not in db_engines:
         db_path = os.path.join(BASE_DB_PATH, f"{app_slug}.db")
-        # check_same_thread=False es vital para SQLite en entornos Flask
-        engine = create_engine(f"sqlite:///{db_path}", connect_args={'check_same_thread': False})
+        
+        # Añadir timeout de 15 segundos para evitar (Disk I/O Error)
+        engine = create_engine(
+            f"sqlite:///{db_path}", 
+            connect_args={
+                'check_same_thread': False,
+                'timeout': 15
+            }
+        )
+        
+        # Activar modo WAL (Write-Ahead Logging) para alta concurrencia
+        with engine.connect() as conn:
+            conn.execute(text("PRAGMA journal_mode=WAL;"))
+            
         db_engines[app_slug] = engine
+        
     return db_engines[app_slug]
 
 def init_db(app_slug):
-    """Inicializa la tabla de miembros (member) sin la columna PIN"""
+    """Inicializa la tabla de miembros (member)"""
     engine = get_engine(app_slug)
     metadata = MetaData()
     
-    # Definición de la tabla Member reformada
+    # Definición de la tabla Member
     member_table = Table('member', metadata,
         Column('id', Integer, primary_key=True, autoincrement=True),
         Column('nombre', String(100)),
@@ -57,15 +79,14 @@ def init_db(app_slug):
     return member_table
 
 # ==========================================
-# 4. RUTAS DE LA API (APP T)
+# 4. RUTAS DE LA API PRINCIPAL (EL PADRE)
 # ==========================================
 
-@appt_bp.route('/api/<app_slug>/crear_ahora', methods=['GET'])
+@tribu_bp.route('/api/<app_slug>/crear_ahora', methods=['GET'])
 def crear_ahora(app_slug):
     """Ruta para inicializar la base de datos manualmente desde el navegador"""
     try:
         init_db(app_slug)
-        # Devolvemos HTML simple para que se vea bonito en el navegador
         return f"""
         <html>
             <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px; background-color: #f8f9fa;">
@@ -78,7 +99,7 @@ def crear_ahora(app_slug):
     except Exception as e:
         return f"<h1>Error al crear la base de datos</h1><p>{str(e)}</p>", 500
 
-@appt_bp.route('/api/<app_slug>/registro', methods=['POST', 'OPTIONS'])
+@tribu_bp.route('/api/<app_slug>/registro', methods=['POST', 'OPTIONS'])
 def registro(app_slug):
     """Proceso inteligente: Login o Registro separados lógicamente"""
     if request.method == 'OPTIONS':
@@ -90,7 +111,7 @@ def registro(app_slug):
 
     nombre = data.get('nombre')
     password = data.get('password')
-    es_registro = data.get('esRegistro', False) # <-- ¡NUEVO! Detectar si es registro
+    es_registro = data.get('esRegistro', False)
 
     if not nombre or not password:
         return jsonify({"error": "Nombre de usuario y contraseña son obligatorios"}), 400
@@ -114,7 +135,6 @@ def registro(app_slug):
         engine = get_engine(app_slug)
         
         with engine.connect() as conn:
-            # Verificar si el nombre ya está registrado
             usuario_existente = conn.execute(
                 member_table.select().where(member_table.c.nombre == nombre_usuario)
             ).fetchone()
@@ -123,11 +143,7 @@ def registro(app_slug):
                 if es_registro:
                     return jsonify({"error": "Este usuario ya existe. Por favor, inicia sesión."}), 400
 
-                # ==========================================
-                # MODO LOGIN: El usuario ya existe
-                # ==========================================
-                
-                # Caso Superusuario
+                # MODO LOGIN
                 if es_super and password == 'CR129x7949n':
                     return jsonify({
                         "status": "ok", 
@@ -135,7 +151,6 @@ def registro(app_slug):
                         "rol": "superadmin"
                     })
                 
-                # Caso Usuario Normal
                 hash_guardado = getattr(usuario_existente, 'password', usuario_existente[4])
                 rol_guardado = getattr(usuario_existente, 'rol', usuario_existente[6])
                 
@@ -149,11 +164,8 @@ def registro(app_slug):
                     return jsonify({"error": "El usuario ya existe, pero la contraseña es incorrecta."}), 401
             
             else:
-                # El usuario NO existe en la base de datos
                 if es_registro:
-                    # ==========================================
-                    # MODO REGISTRO LEGÍTIMO
-                    # ==========================================
+                    # MODO REGISTRO
                     hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
                     
                     conn.execute(member_table.insert().values(
@@ -170,18 +182,14 @@ def registro(app_slug):
                         "rol": rol
                     })
                 else:
-                    # ==========================================
-                    # MODO BARRERA: Intentó loguearse pero no existe
-                    # ==========================================
                     return jsonify({"error": "Acceso denegado: Este usuario NO está registrado."}), 404
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# === NUEVA RUTA PARA OBTENER TODOS LOS USUARIOS ===
-@appt_bp.route('/api/<app_slug>/usuarios', methods=['GET', 'OPTIONS'])
+@tribu_bp.route('/api/<app_slug>/usuarios', methods=['GET', 'OPTIONS'])
 def obtener_usuarios(app_slug):
-    """Devuelve la lista de todos los usuarios registrados (Para el panel de Ajustes)"""
+    """Devuelve la lista de todos los usuarios registrados"""
     if request.method == 'OPTIONS':
         return jsonify({"status": "ok"}), 200
 
@@ -190,7 +198,6 @@ def obtener_usuarios(app_slug):
         engine = get_engine(app_slug)
         
         with engine.connect() as conn:
-            # Seleccionamos a todos los usuarios (omitiendo contraseñas por seguridad)
             usuarios = conn.execute(member_table.select()).fetchall()
             
             lista_usuarios = []
@@ -207,10 +214,9 @@ def obtener_usuarios(app_slug):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-@appt_bp.route('/api/<app_slug>/check_update', methods=['GET', 'OPTIONS'])
+@tribu_bp.route('/api/<app_slug>/check_update', methods=['GET', 'OPTIONS'])
 def check_update(app_slug):
-    """Manejo de actualizaciones OTA para la interfaz de la App T"""
+    """Manejo de actualizaciones OTA para la interfaz de la App"""
     if request.method == 'OPTIONS':
         return jsonify({"status": "ok"}), 200
 
@@ -229,8 +235,7 @@ def check_update(app_slug):
     except Exception as e:
         return jsonify({"status": "error", "mensaje": str(e)}), 500
 
-
-@appt_bp.route('/api/<app_slug>/descargar_update', methods=['GET'])
+@tribu_bp.route('/api/<app_slug>/descargar_update', methods=['GET'])
 def descargar_update(app_slug):
     """Permite la descarga del archivo de actualización"""
     return send_from_directory(BASE_UPDATE_PATH, 'www.zip', as_attachment=True)

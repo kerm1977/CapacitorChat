@@ -9,6 +9,11 @@ const rl = readline.createInterface({
     output: process.stdout
 });
 
+// === NUEVO: Función para hacer preguntas asíncronas en consola ===
+function askQuestion(query) {
+    return new Promise(resolve => rl.question(query, resolve));
+}
+
 /**
  * Script de automatización para el Motor Universal v2
  * Este script configura los archivos locales para conectar con una base de datos 
@@ -126,12 +131,48 @@ async function finalizarConfiguracion(appName, appSlug, appId, iconPath) {
     }
 
     // =============================================================
-    // AUTO-REGISTRO EN LA BASE DE DATOS REMOTA
+    // AUTO-REGISTRO EN LA BASE DE DATOS REMOTA (Y SUPERUSUARIOS)
     // =============================================================
+    
+    console.log("\n======================================================");
+    console.log("👥 CONFIGURACIÓN DE SUPERUSUARIOS");
+    console.log("======================================================");
+
+    // 1. Preguntar cantidad de superusuarios (1 a 4)
+    let numUsuarios = 0;
+    while (numUsuarios < 1 || numUsuarios > 4) {
+        const numInput = await askQuestion("¿Cuántos superusuarios maestros deseas agregar? (1 a 4): ");
+        const parsed = parseInt(numInput.trim(), 10);
+        if (!isNaN(parsed) && parsed >= 1 && parsed <= 4) {
+            numUsuarios = parsed;
+        } else {
+            console.log("  [!] Por favor, ingresa un número válido entre 1 y 4.");
+        }
+    }
+
+    // 2. Recopilar datos de cada superusuario
+    const superusuarios = [];
+    for (let i = 1; i <= numUsuarios; i++) {
+        console.log(`\n--- Administrador ${i} ---`);
+        
+        let nombre = "";
+        while (!nombre) {
+            nombre = (await askQuestion(`Nombre / Correo del Admin ${i}: `)).trim();
+            if (!nombre) console.log("  [!] El nombre o correo no puede estar vacío.");
+        }
+
+        let password = "";
+        while (!password) {
+            password = (await askQuestion(`Contraseña del Admin ${i}: `)).trim();
+            if (!password) console.log("  [!] La contraseña no puede estar vacía.");
+        }
+
+        superusuarios.push({ nombre, password });
+    }
+
     console.log("\n⏳ Conectando con el servidor de PythonAnywhere...");
     try {
-        // 1. Ejecutar la ruta /crear_ahora para instanciar el archivo de Base de Datos
-        // NOTA: Se respeta mayúsculas/minúsculas de la variable appSlug
+        // 3. Ejecutar la ruta /crear_ahora para instanciar el archivo de Base de Datos
         const urlCrear = `https://kenth1977.pythonanywhere.com/api/${appSlug}/crear_ahora`;
         
         await new Promise((resolve, reject) => {
@@ -147,12 +188,7 @@ async function finalizarConfiguracion(appName, appSlug, appId, iconPath) {
         });
         console.log(`  [✔] Base de datos ${appSlug}.db generada y verificada en el servidor.`);
 
-        // 2. Inyectar los superusuarios maestros
-        const superusuarios = [
-            { nombre: "kenth1977@gmail.com", password: "CR129x7848n" },
-            { nombre: "lthikingcr@gmail.com", password: "CR129x7848n" }
-        ];
-
+        // 4. Inyectar los superusuarios maestros (Dinámicos)
         for (const su of superusuarios) {
             const dataStr = JSON.stringify({
                 nombre: su.nombre,
@@ -177,6 +213,8 @@ async function finalizarConfiguracion(appName, appSlug, appId, iconPath) {
                         // continuamos con el script, pero lo notificamos en consola.
                         if(res.statusCode >= 400) {
                             console.log(`  [!] Info: El usuario ${su.nombre} ya estaba registrado o hubo un error menor (HTTP ${res.statusCode}).`);
+                        } else {
+                            console.log(`  [✔] Superusuario ${su.nombre} registrado exitosamente.`);
                         }
                         resolve();
                     });
@@ -186,7 +224,6 @@ async function finalizarConfiguracion(appName, appSlug, appId, iconPath) {
                 req.end();
             });
         }
-        console.log(`  [✔] Superusuarios maestros registrados exitosamente.`);
         
     } catch (error) {
         console.error(`  [!] Advertencia crítica en servidor: ${error.message}`);
@@ -202,5 +239,5 @@ async function finalizarConfiguracion(appName, appSlug, appId, iconPath) {
     console.log(`2. Ejecuta: construir.bat`);
     console.log("======================================================\n");
     
-    rl.close();
+    rl.close(); // Cerramos la consola solo hasta el final de todo el proceso
 }

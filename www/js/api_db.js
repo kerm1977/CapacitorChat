@@ -1,6 +1,6 @@
 // Esta URL será actualizada automáticamente por el script configurar_proyecto.js
 // Ejemplo: https://kenth1977.pythonanywhere.com/api/MiAppSlug
-const API_URL = "https://kenth1977.pythonanywhere.com/api/TribuApp";  
+const API_URL = "https://kenth1977.pythonanywhere.com/api/TribuV1";  
 
 window.CloudDB = {
     // 1. Función para LEER todos los usuarios (El Ranking) de la app actual

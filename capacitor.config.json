@@ -1,6 +1,6 @@
 {
-  "appId": "com.tribuapp.app",
-  "appName": "TribuApp",
+  "appId": "com.tribuv1.app",
+  "appName": "TribuV1",
   "webDir": "www",
   "bundledWebRuntime": false
 }

@@ -1,3 +1,11 @@
+# ==============================================================================
+# ARCHIVO: chat.py
+# ROL: EL HIJO (Módulo de Mensajería)
+# DESCRIPCIÓN: Este archivo maneja exclusivamente toda la lógica del chat 
+#              (enviar, recibir, historial, estados en línea y adjuntos). 
+#              Es un "Blueprint" (sub-módulo) que se conecta a su padre (tribu.py).
+# ==============================================================================
+
 import os
 import sqlite3
 from datetime import datetime
@@ -5,8 +13,13 @@ from flask import Blueprint, request, jsonify, make_response, send_from_director
 from werkzeug.utils import secure_filename
 
 # ==========================================
-# 1. BLUEPRINT CONFIGURATION (CHILD T)
+# 1. BLUEPRINT CONFIGURATION (NIETO / CHILD)
 # ==========================================
+# JERARQUÍA DEL SISTEMA MULTI-APP:
+# [ABUELO] app.py    (Master Gateway en PythonAnywhere)
+#   └── [PADRE]  tribu.py  (App Principal de La Tribu)
+#         └── [HIJO]   chat.py   (Módulo de Mensajería de La Tribu)
+
 chatt_bp = Blueprint('chatt_api', __name__)
 
 # Storage paths
@@ -31,6 +44,21 @@ def allowed_file(filename):
 def get_db_path(app_slug):
     return os.path.join(BASE_DB_PATH, f"{app_slug}.db")
 
+# === NUEVA FUNCIÓN DE CONEXIÓN SEGURA ===
+def get_db_connection(app_slug):
+    """Crea una conexión segura con tolerancia a bloqueos de disco"""
+    # Si la carpeta no existe, la crea
+    if not os.path.exists(BASE_DB_PATH):
+        os.makedirs(BASE_DB_PATH, exist_ok=True)
+        
+    # Le damos 15 segundos de tolerancia antes de lanzar error de disco
+    conn = sqlite3.connect(get_db_path(app_slug), timeout=15.0)
+    # Activa la alta concurrencia (Write-Ahead Logging)
+    conn.execute('PRAGMA journal_mode=WAL;') 
+    return conn
+
+# Nota sobre CORS: Como el ABUELO (app.py) ahora tiene CORS(app), 
+# estas funciones locales son un refuerzo de seguridad secundario.
 def _corsify(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
@@ -106,7 +134,7 @@ def heartbeat_t(app_slug):
         usuario = data.get('usuario')
         if not usuario: return _corsify(jsonify({"error": "Falta usuario"})), 400
         
-        conn = sqlite3.connect(get_db_path(app_slug))
+        conn = get_db_connection(app_slug)
         cursor = conn.cursor()
         _init_chatt_table(cursor)
         cursor.execute('INSERT OR REPLACE INTO user_status (nombre, last_active) VALUES (?, CURRENT_TIMESTAMP)', (usuario,))
@@ -120,7 +148,7 @@ def heartbeat_t(app_slug):
 def contactos_t(app_slug):
     if request.method == 'OPTIONS': return _preflight()
     try:
-        conn = sqlite3.connect(get_db_path(app_slug))
+        conn = get_db_connection(app_slug)
         cursor = conn.cursor()
         _init_chatt_table(cursor)
         
@@ -148,7 +176,7 @@ def contactos_t(app_slug):
 def unread_details_t(app_slug, usuario):
     if request.method == 'OPTIONS': return _preflight()
     try:
-        conn = sqlite3.connect(get_db_path(app_slug))
+        conn = get_db_connection(app_slug)
         cursor = conn.cursor()
         _init_chatt_table(cursor)
         cursor.execute('SELECT emisor, COUNT(*) FROM chat_message WHERE receptor = ? AND is_read = 0 GROUP BY emisor', (usuario,))
@@ -166,7 +194,7 @@ def historial_t(app_slug):
         emisor = data.get('emisor')
         receptor = data.get('receptor')
         
-        conn = sqlite3.connect(get_db_path(app_slug))
+        conn = get_db_connection(app_slug)
         cursor = conn.cursor()
         _init_chatt_table(cursor)
         
@@ -206,7 +234,7 @@ def enviar_t(app_slug):
         archivo_url = data.get('archivo_url', '')
         tipo_archivo = data.get('tipo_archivo', '')
         
-        conn = sqlite3.connect(get_db_path(app_slug))
+        conn = get_db_connection(app_slug)
         cursor = conn.cursor()
         _init_chatt_table(cursor)
         
@@ -229,7 +257,7 @@ def leer_t(app_slug):
         emisor = data.get('emisor')
         receptor = data.get('receptor')
         
-        conn = sqlite3.connect(get_db_path(app_slug))
+        conn = get_db_connection(app_slug)
         cursor = conn.cursor()
         _init_chatt_table(cursor)
         
@@ -248,7 +276,7 @@ def leer_t(app_slug):
 def unread_t(app_slug, usuario):
     if request.method == 'OPTIONS': return _preflight()
     try:
-        conn = sqlite3.connect(get_db_path(app_slug))
+        conn = get_db_connection(app_slug)
         cursor = conn.cursor()
         _init_chatt_table(cursor)
         
@@ -268,7 +296,7 @@ def limpiar_t(app_slug):
         emisor = data.get('emisor')
         receptor = data.get('receptor')
         
-        conn = sqlite3.connect(get_db_path(app_slug))
+        conn = get_db_connection(app_slug)
         cursor = conn.cursor()
         _init_chatt_table(cursor)
         
@@ -295,7 +323,7 @@ def borrar_mensaje_t(app_slug):
         if not mensaje_id:
             return _corsify(jsonify({"error": "ID de mensaje no proporcionado"})), 400
             
-        conn = sqlite3.connect(get_db_path(app_slug))
+        conn = get_db_connection(app_slug)
         cursor = conn.cursor()
         _init_chatt_table(cursor)
         
@@ -344,7 +372,7 @@ def logout_t(app_slug):
         usuario = data.get('usuario')
         if not usuario: return _corsify(jsonify({"error": "Falta usuario"})), 400
         
-        conn = sqlite3.connect(get_db_path(app_slug))
+        conn = get_db_connection(app_slug)
         cursor = conn.cursor()
         _init_chatt_table(cursor)
         
